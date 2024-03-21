@@ -14,18 +14,12 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include <memory>
-
-#include "host/commands/cvd/instance_manager.h"
-#include "host/commands/cvd/server.h"
-#include "host/commands/cvd/server_command/server_handler.h"
-#include "host/libs/web/android_build_api.h"
+#include <string>
 
 namespace cuttlefish {
 
-std::unique_ptr<CvdServerHandler> NewCvdRestartHandler(
-    CvdServer& server, InstanceManager& instance_manager);
+bool IsSparseImage(const std::string& image_path);
+
+bool ConvertToRawImage(const std::string& image_path);
 
 }  // namespace cuttlefish

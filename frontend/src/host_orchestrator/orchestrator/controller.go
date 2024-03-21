@@ -40,6 +40,7 @@ const HeaderBuildAPICreds = "X-Cutf-Host-Orchestrator-BuildAPI-Creds"
 type Config struct {
 	Paths                  IMPaths
 	AndroidBuildServiceURL string
+	CVDCreationTimeout     time.Duration
 	CVDUser                string
 }
 
@@ -176,11 +177,6 @@ func (h *createCVDHandler) Handle(r *http.Request) (interface{}, error) {
 		http.DefaultClient, h.Config.AndroidBuildServiceURL, buildAPIOpts)
 	artifactsFetcher := newBuildAPIArtifactsFetcher(buildAPI)
 	cvdBundleFetcher := newFetchCVDCommandArtifactsFetcher(exec.CommandContext, creds)
-	cvdStartTimeout := 3 * time.Minute
-	if req.EnvConfig != nil {
-		// Use a lengthier timeout when using canonical configs as this operation downloads artifacts as well.
-		cvdStartTimeout = 7 * time.Minute
-	}
 	opts := CreateCVDActionOpts{
 		Request:                  req,
 		HostValidator:            &HostValidator{ExecContext: exec.CommandContext},
@@ -191,7 +187,7 @@ func (h *createCVDHandler) Handle(r *http.Request) (interface{}, error) {
 		ArtifactsFetcher:         artifactsFetcher,
 		CVDBundleFetcher:         cvdBundleFetcher,
 		UUIDGen:                  func() string { return uuid.New().String() },
-		CVDStartTimeout:          cvdStartTimeout,
+		CVDStartTimeout:          h.Config.CVDCreationTimeout,
 		CVDUser:                  h.Config.CVDUser,
 		UserArtifactsDirResolver: h.UADirResolver,
 		BuildAPICredentials:      creds,
