@@ -67,6 +67,9 @@ Result<std::string> GenerateDisplayFlag(const EnvironmentSpecification& cfg) {
       } else {
         out_display.set_refresh_rate_hertz(CF_DEFAULTS_DISPLAY_REFRESH_RATE);
       }
+      if (in_display.has_overlays()) {
+        out_display.set_overlays(in_display.overlays());
+      }
     }
   }
 
@@ -88,12 +91,21 @@ bool RecordScreen(const Instance& instance) {
     return CF_DEFAULTS_RECORD_SCREEN;
   }
 }
-
+std::string GpuMode(const Instance& instance) {
+  if (instance.graphics().has_gpu_mode()) {
+    return instance.graphics().gpu_mode();
+  } else {
+    // Return blank to allow for default value to override
+    // by Cuttlefish host tools
+    return "";
+  }
+}
 Result<std::vector<std::string>> GenerateGraphicsFlags(
     const EnvironmentSpecification& cfg) {
   return std::vector<std::string>{
       CF_EXPECT(GenerateDisplayFlag(cfg)),
       GenerateInstanceFlag("record_screen", cfg, RecordScreen),
+      GenerateInstanceFlag("gpu_mode", cfg, GpuMode),
   };
 }
 
