@@ -622,7 +622,7 @@ where
                 .bits(),
             // This device does not support V4L2_BUF_CAP_SUPPORTS_MMAP_CACHE_HINTS,
             // so the flags field in v4l2_requestbuffers must be 0.
-            flags: 0,
+            // flags: 0,
             ..Default::default()
         })
     }
