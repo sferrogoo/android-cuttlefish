@@ -632,7 +632,12 @@ func (c *HostOrchestratorClientImpl) ExtractArtifact(filename string) error {
 	if err := c.HTTPHelper.NewPostRequest("/v1/userartifacts/"+checksum+"/:extract", nil).JSONResDo(op); err != nil {
 		return err
 	}
-	if err := c.waitForOperation(op.Name, nil); err != nil {
+	retryOpts := RetryOptions{
+		StatusCodes: []int{http.StatusServiceUnavailable, http.StatusGatewayTimeout},
+		RetryDelay:  5 * time.Second,
+		MaxWait:     15 * time.Minute,
+	}
+	if err := c.waitForOperationOpts(op.Name, nil, retryOpts); err != nil {
 		var apiErr *ApiCallError
 		if errors.As(err, &apiErr) && apiErr.HTTPStatusCode == http.StatusConflict {
 			// 409 Conflict is returned if the artifact was already started
