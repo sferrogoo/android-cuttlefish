@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #pragma once
 
+#include <sys/stat.h>
+
 #include <string>
+#include <string_view>
+
+#include "cuttlefish/result/result_type.h"
 
 namespace cuttlefish {
 
-inline constexpr char kTransmitterPath[] =
-    "/usr/lib/cuttlefish-metrics/bin/metrics_transmitter";
-
-// trigger check for v2 metrics
-bool AreMetricsEnabled();
-
-std::string TransmitterPath();
+Result<struct stat> Stat(const char*);
+Result<struct stat> Stat(const std::string&);
+Result<struct stat> Stat(std::string_view);
 
 }  // namespace cuttlefish

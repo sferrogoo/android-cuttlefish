@@ -13,19 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #pragma once
 
-#include <string>
+#include <errno.h>
 
-namespace cuttlefish {
-
-inline constexpr char kTransmitterPath[] =
-    "/usr/lib/cuttlefish-metrics/bin/metrics_transmitter";
-
-// trigger check for v2 metrics
-bool AreMetricsEnabled();
-
-std::string TransmitterPath();
-
-}  // namespace cuttlefish
+// glibc-ism, not guaranteed by posix
+#ifndef TEMP_FAILURE_RETRY
+// https://cs.android.com/android/platform/superproject/+/android-latest-release:bionic/libc/include/unistd.h;l=479;drc=3f4f1697e89d3904f441db4977920448d3861a10
+/* Used to retry syscalls that can return EINTR. */
+#define TEMP_FAILURE_RETRY(exp)            \
+  ({                                       \
+    __typeof__(exp) _rc;                   \
+    do {                                   \
+      _rc = (exp);                         \
+    } while (_rc == -1 && errno == EINTR); \
+    _rc;                                   \
+  })
+#endif
