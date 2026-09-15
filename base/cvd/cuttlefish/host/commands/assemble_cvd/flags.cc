@@ -622,6 +622,14 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
   std::vector<bool> smt_vec = CF_EXPECT(GET_FLAG_BOOL_VALUE(smt));
   std::vector<std::string> crosvm_binary_vec =
       CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_binary));
+  std::vector<std::string> crosvm_acpi_table_vec =
+      CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_acpi_table));
+  std::vector<std::string> crosvm_device_tree_overlay_vec =
+      CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_device_tree_overlay));
+  std::vector<std::string> crosvm_file_backed_mapping_vec =
+      CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_file_backed_mapping));
+  std::vector<std::string> crosvm_file_backed_mapping_base64_vec =
+      CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_file_backed_mapping_base64));
   std::vector<std::string> seccomp_policy_dir_vec =
       CF_EXPECT(GET_FLAG_STR_VALUE(seccomp_policy_dir));
   std::vector<std::string> qemu_binary_dir_vec =
@@ -847,6 +855,18 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
     }
 
     instance.set_crosvm_binary(crosvm_binary_vec[instance_index]);
+    instance.set_crosvm_acpi_table(crosvm_acpi_table_vec[instance_index]);
+    instance.set_crosvm_device_tree_overlay(
+        crosvm_device_tree_overlay_vec[instance_index]);
+    instance.set_crosvm_file_backed_mapping(
+        crosvm_file_backed_mapping_vec[instance_index]);
+    if (!crosvm_file_backed_mapping_base64_vec[instance_index].empty()) {
+      std::vector<uint8_t> decoded_mapping = CF_EXPECT(
+          DecodeBase64(crosvm_file_backed_mapping_base64_vec[instance_index]));
+      std::string decoded_mapping_str(decoded_mapping.begin(),
+                                      decoded_mapping.end());
+      instance.set_crosvm_file_backed_mapping(decoded_mapping_str);
+    }
     instance.set_seccomp_policy_dir(seccomp_policy_dir_vec[instance_index]);
     instance.set_qemu_binary_dir(qemu_binary_dir_vec[instance_index]);
 
@@ -1053,6 +1073,13 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
       instance.set_ethernet_bridge_name("cvd-ebr");
     }
     instance.set_mobile_tap_name(iface_config.mobile_tap.name);
+
+    auto external_network_mode = CF_EXPECT(
+        ParseExternalNetworkMode(device_external_network_vec[instance_index]));
+    CF_EXPECT(external_network_mode == ExternalNetworkMode::kTap ||
+                  external_network_mode == ExternalNetworkMode::kSlirp,
+              "Unknown external_network_mode");
+    instance.set_external_network_mode(external_network_mode);
 
     CF_EXPECT(ConfigureNetworkSettings(
         ril_dns_vec[instance_index], tmp_config_obj, const_instance, instance));
@@ -1330,13 +1357,6 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
     } else {
       instance.set_modem_simulator_ports("");
     }
-
-    auto external_network_mode = CF_EXPECT(
-        ParseExternalNetworkMode(device_external_network_vec[instance_index]));
-    CF_EXPECT(external_network_mode == ExternalNetworkMode::kTap ||
-                  external_network_mode == ExternalNetworkMode::kSlirp,
-              "Unknown external_network_mode");
-    instance.set_external_network_mode(external_network_mode);
 
     instance.set_mcu(CF_EXPECT(mcu_config_paths.JsonForIndex(instance_index)));
 
