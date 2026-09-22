@@ -32,35 +32,9 @@ if [ -f "$CACHE_CONFIG_FILE" ]; then
     source "$CACHE_CONFIG_FILE"
 fi
 
-if [[ "${ANDROID_CUTTLEFISH_KOKORO_BUILD_SCRIPT_ARGS:-}" == *"-p"* ]]; then
-    if [[ "${ANDROID_CUTTLEFISH_KOKORO_BUILD_SCRIPT_ARGS:-}" == *"-g"* ]]; then
-        sudo install -m 0755 -d /etc/apt/keyrings
-        sudo curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey -o /etc/apt/keyrings/nvidia-container-toolkit.asc
-        sudo curl -sL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list -o /etc/apt/sources.list.d/nvidia-container-toolkit.list
-        sudo sed -i 's#deb https://#deb [signed-by=/etc/apt/keyrings/nvidia-container-toolkit.asc] https://#g' /etc/apt/sources.list.d/nvidia-container-toolkit.list
-        retry sudo apt update
-        retry sudo apt-get install -y nvidia-container-toolkit
-    fi
-    retry sudo apt-get install -y docker.io
-    sudo systemctl start docker || true
-
-    sudo docker build -t android-cuttlefish-build:latest -f "${TOOL_DIR}/buildutils/cw/Containerfile" "${REPO_DIR}"
-    sudo docker run --rm --network=host -v="${REPO_DIR}":/mnt/build -w /mnt/build android-cuttlefish-build:latest base -r "${BAZEL_REMOTE_CACHE}" -c "${CACHE_VERSION}"
-    sudo docker run --rm --network=host -v="${REPO_DIR}":/mnt/build -w /mnt/build android-cuttlefish-build:latest container
-    sudo docker run --rm --network=host -v="${REPO_DIR}":/mnt/build -w /mnt/build android-cuttlefish-build:latest frontend
-    # Clean up temporary packaging directories created during debuild
-    sudo rm -rf "${REPO_DIR}"/*/debian/tmp
-
-    "${TOOL_DIR}/testutils/prepare_host.sh" -d "${REPO_DIR}" -u testrunner -g kokoro -p
-    sudo -u testrunner "${REPO_DIR}/container/image/image-builder.sh" -c podman -m dev -t localhost/cuttlefish-orchestration:latest
-
-    sudo "${TOOL_DIR}/buildutils/installbazel.sh"
-else
-    "${TOOL_DIR}/buildutils/build_packages.sh" -r "${BAZEL_REMOTE_CACHE}" -c "${CACHE_VERSION}"
-
-    # Add test user to the kokoro group so it has access to the source dir
-    "${TOOL_DIR}/testutils/prepare_host.sh" -d "${REPO_DIR}" -u testrunner -g kokoro
-fi
+"${TOOL_DIR}/buildutils/build_packages.sh" -r "${BAZEL_REMOTE_CACHE}" -c "${CACHE_VERSION}"
+# Add test user to the kokoro group so it has access to the source dir
+"${TOOL_DIR}/testutils/prepare_host.sh" -d "${REPO_DIR}" -u testrunner -g kokoro
 
 # Allow kokoro group to the source dir:
 sudo chmod -R g+w /tmpfs/src

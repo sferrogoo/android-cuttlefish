@@ -18,10 +18,12 @@
 
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include <string>
 
 #include "cuttlefish/files/copy.h"
+#include "cuttlefish/posix/stat.h"
 #include "cuttlefish/posix/strerror.h"
 #include "cuttlefish/result/expect.h"
 #include "cuttlefish/result/result_type.h"
@@ -31,10 +33,8 @@ namespace cuttlefish {
 Result<void> CopyWithAttributes(const std::string& from,
                                 const std::string& to) {
   CF_EXPECTF(Copy(from, to), "Failed to copy '{}' to '{}'", from, to);
-  struct stat st;
-  CF_EXPECTF(stat(from.c_str(), &st) >= 0, "Failed to stat '{}': {}", from,
-             StrError(errno));
-  CF_EXPECTF(chmod(to.c_str(), st.st_mode) >= 0, "Failed to chmod '{}': {}", to,
+  mode_t mode = CF_EXPECT(Stat(from)).st_mode;
+  CF_EXPECTF(chmod(to.c_str(), mode) >= 0, "Failed to chmod '{}': {}", to,
              StrError(errno));
   return {};
 }
