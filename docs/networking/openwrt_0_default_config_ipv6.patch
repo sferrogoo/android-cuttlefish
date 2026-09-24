@@ -1,0 +1,36 @@
+--- a/shared/uci-defaults/0_default_config
++++ b/shared/uci-defaults/0_default_config
+@@ -21,6 +21,12 @@
+         uci set network.wan.broadcast=${word#*"="}
+     elif echo "$word" | grep "^webrtc_device_id="; then
+         webrtc_device_id=${word#*"="}
++    elif echo "$word" | grep "^wan_ip6addr="; then
++        uci set network.wan.ip6addr=${word#*"="}
++    elif echo "$word" | grep "^wan_ip6gw="; then
++        uci set network.wan.ip6gw=${word#*"="}
++    elif echo "$word" | grep "^wifi0_ip6addr="; then
++        wifi0_ip6addr=${word#*"="}
+     fi
+     next=${words#*" "}
+     [ "$words" != "$next" ]
+@@ -34,6 +40,20 @@
+     uci set network.wan.netmask="255.255.255.252"
+ fi
+ 
++# IPv6 (cvdalloc dynamic mode): the host routes the wifi0 prefix to the wan
++# address, and wifi0 clients configure themselves with SLAAC from odhcpd RAs.
++# sourcefilter=0 makes the wan default route apply to wifi0 sources too.
++# ra_default=1 announces the default route although all prefixes are ULA.
++if [ -n "$wifi0_ip6addr" ]; then
++    uci set network.wan.sourcefilter="0"
++    uci add_list network.wifi0.ip6addr="$wifi0_ip6addr"
++    uci set dhcp.wifi0.ra="server"
++    uci set dhcp.wifi0.ra_slaac="1"
++    uci set dhcp.wifi0.ra_default="1"
++    uci add_list dhcp.wifi0.dns="2001:4860:4860::8888"
++    uci add_list dhcp.wifi0.dns="2001:4860:4860::8844"
++fi
++
+ # Modify the path of the web service, luci.
+ ln -sf $(readlink -f /www/cgi-bin/cgi-backup) /www/cgi-bin/cgi-backup
+ ln -sf $(readlink -f /www/cgi-bin/cgi-download) /www/cgi-bin/cgi-download

@@ -17,6 +17,7 @@
 #ifndef ALLOCD_NET_NFTABLES_H_
 #define ALLOCD_NET_NFTABLES_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <string_view>
@@ -49,6 +50,10 @@ class Nftables {
                                             std::string_view table,
                                             std::string_view chain,
                                             std::string_view comment) = 0;
+  // Returns the number of rules across all chains of `table`, or an error if
+  // the table does not exist.
+  virtual Result<size_t> CountRules(std::string_view family,
+                                    std::string_view table) = 0;
 };
 
 }  // namespace cuttlefish

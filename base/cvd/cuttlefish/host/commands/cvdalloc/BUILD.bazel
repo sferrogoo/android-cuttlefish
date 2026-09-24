@@ -1,4 +1,4 @@
-load("//cuttlefish/bazel:rules.bzl", "cf_build_test", "cf_cc_binary", "cf_cc_library")
+load("//cuttlefish/bazel:rules.bzl", "cf_build_test", "cf_cc_binary", "cf_cc_library", "cf_cc_test")
 
 package(
     default_visibility = ["//:android_cuttlefish"],
@@ -14,6 +14,14 @@ cf_cc_library(
     hdrs = ["interface.h"],
     deps = [
         "@abseil-cpp//absl/strings:str_format",
+    ],
+)
+
+cf_cc_test(
+    name = "interface_test",
+    srcs = ["interface_test.cc"],
+    deps = [
+        ":interface",
     ],
 )
 
@@ -51,7 +59,10 @@ cf_cc_binary(
         ":interface",
         ":privilege",
         ":sem",
+        "//allocd:alloc_ipv6",
         "//allocd:alloc_utils",
+        "//allocd:ipv6_firewall",
+        "//allocd/net:nftables",
         "//cuttlefish/common/libs/fs",
         "//cuttlefish/posix:strerror",
         "//cuttlefish/result:expect",
@@ -60,5 +71,6 @@ cf_cc_binary(
         "@abseil-cpp//absl/flags:flag",
         "@abseil-cpp//absl/flags:parse",
         "@abseil-cpp//absl/log",
+        "@abseil-cpp//absl/strings",
     ],
 )

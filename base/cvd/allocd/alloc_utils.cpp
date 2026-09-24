@@ -356,6 +356,14 @@ bool CreateEthernetBridgeIface(std::string_view name, std::string_view ipaddr) {
     return false;
   }
 
+  // A new bridge is administratively down; without this, guests on the bridge
+  // get neither DHCP nor Router Advertisements.
+  if (!BringUpIface(name).has_value()) {
+    LOG(WARNING) << "Failed to bring up bridge: " << name;
+    DestroyBridge(name);
+    return false;
+  }
+
   if (!SetupBridgeGateway(name, ipaddr)) {
     DestroyBridge(name);
     return false;

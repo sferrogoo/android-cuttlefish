@@ -296,12 +296,16 @@ void DataService::HandleReadDynamicParam(const Client& client,
         << cuttlefish::modem::DeviceConfig::ril_ipv6_dns();
     responses.push_back(ss6.str());
 
-    std::stringstream ss6_ula;
-    ss6_ula << "+CGCONTRDP: " << iter->cid << ",5," << iter->apn << ","
-            << cuttlefish::modem::DeviceConfig::ril_ipv6_ula_address_and_prefix() << ","
-            << cuttlefish::modem::DeviceConfig::ril_ipv6_ula_gateway() << ","
-            << cuttlefish::modem::DeviceConfig::ril_ipv6_dns();
-    responses.push_back(ss6_ula.str());
+    const std::string ula_address =
+        cuttlefish::modem::DeviceConfig::ril_ipv6_ula_address_and_prefix();
+    if (!ula_address.empty()) {
+      std::stringstream ss6_ula;
+      ss6_ula << "+CGCONTRDP: " << iter->cid << ",5," << iter->apn << ","
+              << ula_address << ","
+              << cuttlefish::modem::DeviceConfig::ril_ipv6_ula_gateway() << ","
+              << cuttlefish::modem::DeviceConfig::ril_ipv6_dns();
+      responses.push_back(ss6_ula.str());
+    }
     responses.push_back("OK");
   }
 

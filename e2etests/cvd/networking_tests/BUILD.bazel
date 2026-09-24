@@ -4,10 +4,12 @@ go_test(
     name = "networking_tests",
     size = "large",
     srcs = [
+        "ipv6_dynamic_test.go",
         "ipv6_test.go",
         "main_test.go",
     ],
     data = [
+        "ipv6_dynamic_test.go",
         "ipv6_test.go",
         "main_test.go",
         "//:debian_substitution_marker",

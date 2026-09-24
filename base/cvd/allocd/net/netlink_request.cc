@@ -110,6 +110,19 @@ void NetlinkRequest::AddInAddr(uint16_t type, in_addr_t* addr) {
   AppendTag(type, addr, sizeof(in_addr_t));
 }
 
+void NetlinkRequest::AddAddr6Info(int32_t if_index, int prefix_len) {
+  ifaddrmsg* ad_info = Reserve<ifaddrmsg>();
+  ad_info->ifa_family = AF_INET6;
+  ad_info->ifa_prefixlen = prefix_len;
+  ad_info->ifa_flags = IFA_F_PERMANENT | IFA_F_NODAD;
+  ad_info->ifa_scope = RT_SCOPE_UNIVERSE;
+  ad_info->ifa_index = if_index;
+}
+
+void NetlinkRequest::AddIn6Addr(uint16_t type, const in6_addr* addr) {
+  AppendTag(type, addr, sizeof(in6_addr));
+}
+
 void NetlinkRequest::PushList(uint16_t type) {
   int length = request_.size();
   nlattr* list = AppendTag(type, NULL, 0);

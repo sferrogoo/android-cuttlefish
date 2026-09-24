@@ -38,4 +38,17 @@ Result<void> CreateBridge(std::string_view name);
 Result<void> IptableConfig(std::string_view iptables_path,
                            std::string_view network, bool add);
 
+// Adds (or replaces) a permanent IPv6 address without duplicate address
+// detection. `address` is textual ("fd00:cf:11:1::1").
+Result<void> AddIpv6Address(std::string_view name, std::string_view address,
+                            int prefix_len);
+Result<void> DeleteIpv6Address(std::string_view name, std::string_view address,
+                               int prefix_len);
+// Adds (or replaces) a route to `destination`/`prefix_len` via `gateway`.
+Result<void> AddIpv6Route(std::string_view name, std::string_view destination,
+                          int prefix_len, std::string_view gateway);
+Result<void> DeleteIpv6Route(std::string_view name,
+                             std::string_view destination, int prefix_len,
+                             std::string_view gateway);
+
 }  // namespace cuttlefish

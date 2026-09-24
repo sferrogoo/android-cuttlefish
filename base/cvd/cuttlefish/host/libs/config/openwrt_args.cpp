@@ -101,6 +101,26 @@ std::unordered_map<std::string, std::string> OpenwrtArgsFromConfig(
   openwrt_args["wifi0_ula_ip6addr"] =
       "fd00:cf:23:" + std::to_string(instance_num) + "::1/64";
 
+  if (instance.use_cvdalloc()) {
+    // Dynamic mode uses ULA prefixes only (fd00:cf:1X). cvdalloc assigns
+    // fd00:cf:13:<num>::1/64 to the wifiap tap and routes the OpenWrt LAN
+    // prefix fd00:cf:15:<num>::/64 via fd00:cf:13:<num>::2. On the shared
+    // bridged wifi tap there is no per-instance route, so no IPv6 is passed.
+    openwrt_args.erase("wan_ip6gw");
+    openwrt_args.erase("wan_ip6addr");
+    openwrt_args.erase("wifi0_ip6addr");
+    openwrt_args.erase("wifi0_ula_ip6addr");
+    if (!instance.use_bridged_wifi_tap()) {
+      openwrt_args["wan_ip6gw"] = InstanceToWifiApIpv6Gateway(instance_num);
+      openwrt_args["wan_ip6addr"] = InstanceToWifiApIpv6Address(instance_num) +
+                                    "/" +
+                                    std::to_string(kCvdallocIpv6PrefixLength);
+      openwrt_args["wifi0_ip6addr"] =
+          InstanceToWifiLanIpv6Gateway(instance_num) + "/" +
+          std::to_string(kCvdallocIpv6PrefixLength);
+    }
+  }
+
   return openwrt_args;
 }
 

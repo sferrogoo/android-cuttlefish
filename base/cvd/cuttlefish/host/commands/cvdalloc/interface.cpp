@@ -61,4 +61,64 @@ std::string InstanceToBridgedWifiBroadcast(int num) {
   return absl::StrFormat("%s.%d", kCvdallocWirelessIpPrefix, 4 * num - 1);
 }
 
+namespace {
+
+std::string InstanceIpv6Prefix(int segment, int num) {
+  return absl::StrFormat("%s:%x:%d::", kCvdallocIpv6UlaPrefix, segment, num);
+}
+
+std::string SharedIpv6Prefix(int segment) {
+  return absl::StrFormat("%s:%x::", kCvdallocIpv6UlaPrefix, segment);
+}
+
+}  // namespace
+
+std::string InstanceToMobileIpv6Prefix(int num) {
+  return InstanceIpv6Prefix(kCvdallocIpv6MobileSegment, num);
+}
+
+std::string InstanceToMobileIpv6Gateway(int num) {
+  return InstanceToMobileIpv6Prefix(num) + "1";
+}
+
+std::string InstanceToMobileIpv6Address(int num) {
+  return InstanceToMobileIpv6Prefix(num) + "2";
+}
+
+std::string InstanceToWifiApIpv6Prefix(int num) {
+  return InstanceIpv6Prefix(kCvdallocIpv6WifiApSegment, num);
+}
+
+std::string InstanceToWifiApIpv6Gateway(int num) {
+  return InstanceToWifiApIpv6Prefix(num) + "1";
+}
+
+std::string InstanceToWifiApIpv6Address(int num) {
+  return InstanceToWifiApIpv6Prefix(num) + "2";
+}
+
+std::string InstanceToWifiLanIpv6Prefix(int num) {
+  return InstanceIpv6Prefix(kCvdallocIpv6WifiLanSegment, num);
+}
+
+std::string InstanceToWifiLanIpv6Gateway(int num) {
+  return InstanceToWifiLanIpv6Prefix(num) + "1";
+}
+
+std::string CvdallocEthernetIpv6Prefix() {
+  return SharedIpv6Prefix(kCvdallocIpv6EthernetSegment);
+}
+
+std::string CvdallocEthernetIpv6Gateway() {
+  return CvdallocEthernetIpv6Prefix() + "1";
+}
+
+std::string CvdallocBridgedWifiIpv6Prefix() {
+  return SharedIpv6Prefix(kCvdallocIpv6BridgedWifiSegment);
+}
+
+std::string CvdallocBridgedWifiIpv6Gateway() {
+  return CvdallocBridgedWifiIpv6Prefix() + "1";
+}
+
 }  // namespace cuttlefish

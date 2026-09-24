@@ -102,4 +102,41 @@ Result<void> IptableConfig(std::string_view iptables_path,
   return {};
 }
 
+Result<void> AddIpv6Address(std::string_view name, std::string_view address,
+                            int prefix_len) {
+  CF_EXPECT(Execute({"ip", "-6", "addr", "replace",
+                     absl::StrCat(address, "/", prefix_len), "dev",
+                     std::string(name), "nodad"}) == 0,
+            "AddIpv6Address");
+  return {};
+}
+
+Result<void> DeleteIpv6Address(std::string_view name, std::string_view address,
+                               int prefix_len) {
+  CF_EXPECT(Execute({"ip", "-6", "addr", "del",
+                     absl::StrCat(address, "/", prefix_len), "dev",
+                     std::string(name)}) == 0,
+            "DeleteIpv6Address");
+  return {};
+}
+
+Result<void> AddIpv6Route(std::string_view name, std::string_view destination,
+                          int prefix_len, std::string_view gateway) {
+  CF_EXPECT(Execute({"ip", "-6", "route", "replace",
+                     absl::StrCat(destination, "/", prefix_len), "via",
+                     std::string(gateway), "dev", std::string(name)}) == 0,
+            "AddIpv6Route");
+  return {};
+}
+
+Result<void> DeleteIpv6Route(std::string_view name,
+                             std::string_view destination, int prefix_len,
+                             std::string_view gateway) {
+  CF_EXPECT(Execute({"ip", "-6", "route", "del",
+                     absl::StrCat(destination, "/", prefix_len), "via",
+                     std::string(gateway), "dev", std::string(name)}) == 0,
+            "DeleteIpv6Route");
+  return {};
+}
+
 }  // namespace cuttlefish

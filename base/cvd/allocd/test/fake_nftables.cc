@@ -16,6 +16,7 @@
 
 #include "allocd/test/fake_nftables.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <algorithm>
@@ -120,6 +121,17 @@ Result<void> FakeNftables::DeleteRulesByComment(std::string_view family,
 bool FakeNftables::HasTable(std::string_view family,
                             std::string_view table) const {
   return FindTable(family, table) != nullptr;
+}
+
+Result<size_t> FakeNftables::CountRules(std::string_view family,
+                                        std::string_view table) {
+  const Table* t = FindTable(family, table);
+  CF_EXPECTF(t != nullptr, "no such table: family={}, table={}", family, table);
+  size_t count = 0;
+  for (const auto& [name, rules] : t->chains) {
+    count += rules.size();
+  }
+  return count;
 }
 
 bool FakeNftables::HasChain(std::string_view family, std::string_view table,

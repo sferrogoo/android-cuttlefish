@@ -64,6 +64,9 @@ class OpenwrtControlServer : public CommandSource {
     openwrt_control_server_cmd.AddParameter(
         "--openwrt_log_path=",
         AbsolutePath(first_instance.PerInstanceLogPath(kLogNameCrosvmOpenWrt)));
+    openwrt_control_server_cmd.AddParameter(
+        "--provision_static_ipv6=",
+        first_instance.use_cvdalloc() ? "false" : "true");
 
     std::vector<MonitorCommand> commands;
     commands.emplace_back(std::move(openwrt_control_server_cmd));

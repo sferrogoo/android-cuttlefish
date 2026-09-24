@@ -1,5 +1,5 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load("//cuttlefish/bazel:rules.bzl", "cf_cc_library")
+load("//cuttlefish/bazel:rules.bzl", "cf_cc_library", "cf_cc_test")
 
 package(
     default_visibility = ["//:android_cuttlefish"],
@@ -70,5 +70,62 @@ cf_cc_library(
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/strings",
+    ],
+)
+
+cf_cc_library(
+    name = "ipv6_firewall",
+    srcs = ["ipv6_firewall.cpp"],
+    hdrs = ["ipv6_firewall.h"],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
+    deps = [
+        "//allocd/net:nftables",
+        "//cuttlefish/result",
+        "@abseil-cpp//absl/log",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/strings:str_format",
+    ],
+)
+
+cf_cc_test(
+    name = "ipv6_firewall_test",
+    srcs = ["ipv6_firewall_test.cc"],
+    deps = [
+        ":ipv6_firewall",
+        "//allocd/test:fake_nftables",
+        "//cuttlefish/result:result_matchers",
+    ],
+)
+
+cf_cc_library(
+    name = "alloc_ipv6",
+    srcs = ["alloc_ipv6.cpp"],
+    hdrs = ["alloc_ipv6.h"],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
+    deps = select({
+        ":netlink": [":alloc_netlink"],
+        "//conditions:default": [":alloc_iproute2"],
+    }) + [
+        ":alloc_utils",
+        "//cuttlefish/common/libs/fs",
+        "//cuttlefish/common/libs/utils:files",
+        "//cuttlefish/files:file_exists",
+        "//cuttlefish/host/commands/cvd/utils:common",
+        "//cuttlefish/process:execute",
+        "//cuttlefish/result",
+        "@abseil-cpp//absl/log",
+        "@abseil-cpp//absl/strings",
+    ],
+)
+
+cf_cc_test(
+    name = "alloc_ipv6_test",
+    srcs = ["alloc_ipv6_test.cc"],
+    deps = [
+        ":alloc_ipv6",
     ],
 )

@@ -158,6 +158,13 @@ Result<void> ConfigureNetworkSettings(
     instance.set_ril_broadcast(InstanceToMobileBroadcast(num));
     instance.set_ril_dns("8.8.8.8");
     instance.set_ril_prefixlen(30);
+    if (const_instance.use_cvdalloc()) {
+      // cvdalloc assigns a unique fd00:cf:11:<num>::/64 to each mobile tap.
+      instance.set_ril_ipv6_ipaddr(InstanceToMobileIpv6Address(num));
+      instance.set_ril_ipv6_gateway(InstanceToMobileIpv6Gateway(num));
+      instance.set_ril_ipv6_dns("2001:4860:4860::8888,2001:4860:4860::8844");
+      instance.set_ril_ipv6_prefixlen(kCvdallocIpv6PrefixLength);
+    }
     return {};
   }
 

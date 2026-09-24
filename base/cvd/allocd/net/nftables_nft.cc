@@ -16,6 +16,7 @@
 
 #include "allocd/net/nftables_nft.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <string>
@@ -213,6 +214,32 @@ Result<void> NftablesNft::DeleteRulesByComment(std::string_view family,
   }
 
   return deletion_result;
+}
+
+Result<size_t> NftablesNft::CountRules(std::string_view family,
+                                       std::string_view table) {
+  Command cmd = Command(CF_EXPECT(BinaryPath()))
+                    .AddParameter("-j")
+                    .AddParameter("list")
+                    .AddParameter("table")
+                    .AddParameter(family)
+                    .AddParameter(table);
+
+  std::string stdout_str = CF_EXPECTF(RunAndCaptureStdout(std::move(cmd)),
+                                      "Failed to list nft table: family={}, "
+                                      "table={}",
+                                      family, table);
+  Json::Value json = CF_EXPECT(ParseJson(stdout_str));
+  CF_EXPECTF(json.isMember("nftables") && json["nftables"].isArray(),
+             "Invalid JSON output from nft: {}", stdout_str);
+
+  size_t count = 0;
+  for (const auto& item : json["nftables"]) {
+    if (item.isMember("rule")) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 }  // namespace cuttlefish

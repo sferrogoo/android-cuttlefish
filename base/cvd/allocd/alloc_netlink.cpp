@@ -250,4 +250,105 @@ Result<void> IptableConfig(std::string_view iptables_path,
   return {};
 }
 
+namespace {
+
+Result<in6_addr> ParseIn6Addr(std::string_view text) {
+  in6_addr addr;
+  CF_EXPECTF(inet_pton(AF_INET6, std::string(text).c_str(), &addr) == 1,
+             "Invalid IPv6 address: '{}'", text);
+  return addr;
+}
+
+Result<void> SendIpv6AddressRequest(uint16_t type, uint16_t flags,
+                                    std::string_view name,
+                                    std::string_view address, int prefix_len) {
+  unsigned int index = CF_EXPECT(Index(name));
+  in6_addr addr = CF_EXPECT(ParseIn6Addr(address));
+
+  auto factory = NetlinkClientFactory::Default();
+  std::unique_ptr<NetlinkClient> nl = factory->New(NETLINK_ROUTE);
+
+  NetlinkRequest req(type, flags);
+  req.AddAddr6Info(index, prefix_len);
+  req.AddIn6Addr(IFA_LOCAL, &addr);    // NOLINT(misc-include-cleaner): netlink
+  req.AddIn6Addr(IFA_ADDRESS, &addr);  // NOLINT(misc-include-cleaner): netlink
+  CF_EXPECT(nl->Send(req));
+  return {};
+}
+
+Result<void> SendIpv6RouteRequest(uint16_t type, uint16_t flags,
+                                  std::string_view name,
+                                  std::string_view destination, int prefix_len,
+                                  std::string_view gateway) {
+  unsigned int index = CF_EXPECT(Index(name));
+  in6_addr dst = CF_EXPECT(ParseIn6Addr(destination));
+  in6_addr via = CF_EXPECT(ParseIn6Addr(gateway));
+
+  auto factory = NetlinkClientFactory::Default();
+  std::unique_ptr<NetlinkClient> nl = factory->New(NETLINK_ROUTE);
+
+  NetlinkRequest req(type, flags);
+  // NOLINTBEGIN(misc-include-cleaner): rtnetlink
+  req.Append(rtmsg{
+      .rtm_family = AF_INET6,
+      .rtm_dst_len = static_cast<unsigned char>(prefix_len),
+      .rtm_table = RT_TABLE_MAIN,
+      .rtm_protocol = RTPROT_STATIC,
+      .rtm_scope = RT_SCOPE_UNIVERSE,
+      .rtm_type = RTN_UNICAST,
+  });
+  req.AddIn6Addr(RTA_DST, &dst);
+  req.AddIn6Addr(RTA_GATEWAY, &via);
+  req.AddInt(RTA_OIF, static_cast<uint32_t>(index));
+  // NOLINTEND(misc-include-cleaner): rtnetlink
+  CF_EXPECT(nl->Send(req));
+  return {};
+}
+
+}  // namespace
+
+Result<void> AddIpv6Address(std::string_view name, std::string_view address,
+                            int prefix_len) {
+  VLOG(0) << "AddIpv6Address: " << name << ", " << address << "/" << prefix_len;
+  CF_EXPECT(
+      SendIpv6AddressRequest(
+          RTM_NEWADDR, NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE,
+          name, address, prefix_len),
+      "AddIpv6Address");
+  return {};
+}
+
+Result<void> DeleteIpv6Address(std::string_view name, std::string_view address,
+                               int prefix_len) {
+  VLOG(0) << "DeleteIpv6Address: " << name << ", " << address << "/"
+          << prefix_len;
+  CF_EXPECT(SendIpv6AddressRequest(RTM_DELADDR, NLM_F_REQUEST | NLM_F_ACK, name,
+                                   address, prefix_len),
+            "DeleteIpv6Address");
+  return {};
+}
+
+Result<void> AddIpv6Route(std::string_view name, std::string_view destination,
+                          int prefix_len, std::string_view gateway) {
+  VLOG(0) << "AddIpv6Route: " << destination << "/" << prefix_len << " via "
+          << gateway << " dev " << name;
+  CF_EXPECT(SendIpv6RouteRequest(
+                RTM_NEWROUTE,
+                NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE, name,
+                destination, prefix_len, gateway),
+            "AddIpv6Route");
+  return {};
+}
+
+Result<void> DeleteIpv6Route(std::string_view name,
+                             std::string_view destination, int prefix_len,
+                             std::string_view gateway) {
+  VLOG(0) << "DeleteIpv6Route: " << destination << "/" << prefix_len << " via "
+          << gateway << " dev " << name;
+  CF_EXPECT(SendIpv6RouteRequest(RTM_DELROUTE, NLM_F_REQUEST | NLM_F_ACK, name,
+                                 destination, prefix_len, gateway),
+            "DeleteIpv6Route");
+  return {};
+}
+
 }  // namespace cuttlefish
