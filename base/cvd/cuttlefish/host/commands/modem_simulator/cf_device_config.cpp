@@ -66,23 +66,52 @@ static int GetModemInstanceNumber() {
   return (id >= 1 && id <= 128) ? id : 1;
 }
 
+// In dynamic (cvdalloc) mode assemble_cvd stores the per-instance IPv6 plan
+// in the config. An empty value means static mode.
+static bool HasDynamicIpv6Config() {
+  auto config = cuttlefish::CuttlefishConfig::Get();
+  return config && !config->ForDefaultInstance().ril_ipv6_ipaddr().empty();
+}
+
 std::string DeviceConfig::ril_ipv6_address_and_prefix() {
+  if (HasDynamicIpv6Config()) {
+    auto instance = cuttlefish::CuttlefishConfig::Get()->ForDefaultInstance();
+    return instance.ril_ipv6_ipaddr() + "/" +
+           std::to_string(instance.ril_ipv6_prefixlen());
+  }
   return "2001:db8:cf:21:" + std::to_string(GetModemInstanceNumber()) + "::2/64";
 }
 
 std::string DeviceConfig::ril_ipv6_ula_address_and_prefix() {
+  if (HasDynamicIpv6Config()) {
+    // The dynamic plan is ULA-only; ril_ipv6_address_and_prefix() covers it.
+    return "";
+  }
   return "fd00:cf:21:" + std::to_string(GetModemInstanceNumber()) + "::2/64";
 }
 
 std::string DeviceConfig::ril_ipv6_gateway() {
+  if (HasDynamicIpv6Config()) {
+    return cuttlefish::CuttlefishConfig::Get()
+        ->ForDefaultInstance()
+        .ril_ipv6_gateway();
+  }
   return "2001:db8:cf:21:" + std::to_string(GetModemInstanceNumber()) + "::1";
 }
 
 std::string DeviceConfig::ril_ipv6_ula_gateway() {
+  if (HasDynamicIpv6Config()) {
+    return "";
+  }
   return "fd00:cf:21:" + std::to_string(GetModemInstanceNumber()) + "::1";
 }
 
 std::string DeviceConfig::ril_ipv6_dns() {
+  if (HasDynamicIpv6Config()) {
+    return cuttlefish::CuttlefishConfig::Get()
+        ->ForDefaultInstance()
+        .ril_ipv6_dns();
+  }
   return "2001:4860:4860::8888,2001:4860:4860::8844";
 }
 

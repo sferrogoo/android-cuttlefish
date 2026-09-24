@@ -17,6 +17,7 @@
 #ifndef ALLOCD_TEST_FAKE_NFTABLES_H_
 #define ALLOCD_TEST_FAKE_NFTABLES_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <functional>
@@ -51,6 +52,8 @@ class FakeNftables : public Nftables {
                                     std::string_view table,
                                     std::string_view chain,
                                     std::string_view comment) override;
+  Result<size_t> CountRules(std::string_view family,
+                            std::string_view table) override;
 
   bool HasTable(std::string_view family, std::string_view table) const;
   bool HasChain(std::string_view family, std::string_view table,

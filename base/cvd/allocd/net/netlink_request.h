@@ -67,6 +67,13 @@ class NetlinkRequest {
   // Add an ipv4 address
   void AddInAddr(uint16_t type, in_addr_t* addr);
 
+  // Add an IPv6 address info (permanent, no duplicate address detection) to a
+  // specific interface.
+  void AddAddr6Info(int32_t if_index, int prefix_len);
+
+  // Add an ipv6 address
+  void AddIn6Addr(uint16_t type, const in6_addr* addr);
+
   // Creates new list.
   // List mimic recursive structures in a flat, continuous representation.
   // Each call to PushList() should have a corresponding call to PopList

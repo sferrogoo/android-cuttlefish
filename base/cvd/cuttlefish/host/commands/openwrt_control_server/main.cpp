@@ -60,6 +60,10 @@ DEFINE_bool(bridged_wifi_tap, false,
 DEFINE_string(webrtc_device_id, "", "The device ID in WebRTC like cvd-1");
 DEFINE_string(launcher_log_path, "", "File path for launcher.log");
 DEFINE_string(openwrt_log_path, "", "File path for crosvm_openwrt.log");
+DEFINE_bool(provision_static_ipv6, true,
+            "Apply the static-mode IPv6 configuration to OpenWrt over LuCI "
+            "RPC. Disabled with cvdalloc, where OpenWrt receives its IPv6 "
+            "configuration through the kernel command line.");
 
 namespace cuttlefish {
 namespace {
@@ -88,6 +92,9 @@ class OpenwrtControlServiceImpl final : public OpenwrtControlService::Service {
  public:
   OpenwrtControlServiceImpl(HttpClient& http_client)
       : http_client_(http_client) {
+    if (!FLAGS_provision_static_ipv6) {
+      return;
+    }
     ipv6_provisioning_thread_ = std::thread([this]() {
       ProvisionOpenwrtIpv6Loop();
     });
@@ -126,10 +133,10 @@ class OpenwrtControlServiceImpl final : public OpenwrtControlService::Service {
     response->set_error((*reply)["error"].asString());
     response->set_result(writer.write((*reply)["result"]));
 
-    // If the caller restarted OpenWrt network service (e.g. on snapshot restore),
-    // re-apply the IPv6 configuration.
-    if (request->subpath() == "sys" && request->method() == "exec" &&
-        request->params_size() > 0 &&
+    // If the caller restarted OpenWrt network service (e.g. on snapshot
+    // restore), re-apply the IPv6 configuration.
+    if (FLAGS_provision_static_ipv6 && request->subpath() == "sys" &&
+        request->method() == "exec" && request->params_size() > 0 &&
         absl::StrContains(request->params(0), "network")) {
       (void)ConfigureOpenwrtIpv6Locked();
     }
