@@ -2,7 +2,7 @@ Source: cuttlefish-common
 Maintainer: Cuttlefish Team <cloud-android-ext@google.com>
 Section: misc
 Priority: optional
-Build-Depends: bazel [amd64],
+Build-Depends: bazelisk [amd64 arm64],
                cmake,
                config-package-dev,
                debhelper-compat (= 12),
@@ -14,6 +14,7 @@ Build-Depends: bazel [amd64],
                libclang-dev,
                libcurl4-openssl-dev,
                libfmt-dev,
+               libgbm-dev,
                libgflags-dev,
                libgoogle-glog-dev,
                libgtest-dev,
@@ -56,6 +57,7 @@ Depends: adduser,
          libdrm2,
          libfdt1,
          libfmt-dev,
+         libgbm1,
          libgflags-dev,
          libgl1,
          libjsoncpp-dev,
@@ -90,7 +92,7 @@ Architecture: any
 Depends: cuttlefish-base,
          cuttlefish-user,
          cuttlefish-defaults,
-         cuttlefish-podcvd,
+         cuttlefish-podcvd | base-files (<< 13),
          ${misc:Depends}
 Pre-Depends: ${misc:Pre-Depends}
 Description: Cuttlefish Android Virtual Device companion package
@@ -113,7 +115,7 @@ Description: Utilities for Android cuttlefish devices in the cloud
 
 Package: cuttlefish-defaults
 Architecture: any
-Build-Depends: bazel [amd64],
+Build-Depends: bazelisk [amd64 arm64],
                dh-exec
 Depends: cuttlefish-base,
 Description: May potentially enable new or experimental cuttlefish

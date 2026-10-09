@@ -25,6 +25,7 @@
 
 #include "absl/log/log.h"
 
+#include "cuttlefish/common/libs/fs/fd.h"
 #include "cuttlefish/common/libs/fs/shared_fd.h"
 #include "cuttlefish/common/libs/fs/shared_select.h"
 
@@ -55,7 +56,7 @@ SharedFD SetupAdbSocket(const std::string &adb_host_and_port) {
   if (!local_client->IsOpen()) {
     LOG(WARNING) << "Failed to connect to ADB server socket (non-Android guest?) Using /dev/null workaround."
                  << local_client->StrError();
-    return SharedFD::Open("/dev/null", O_RDWR);
+    return Fd::Open("/dev/null", O_RDWR).value_or(Fd());
   }
   return local_client;
 }
@@ -67,7 +68,7 @@ AdbHandler::AdbHandler(
     std::function<void(const uint8_t *, size_t)> send_to_client)
     : send_to_client_(send_to_client),
       adb_socket_(SetupAdbSocket(adb_host_and_port)),
-      shutdown_(SharedFD::Event(0,0))
+      shutdown_(Fd::Event(0, 0).value_or(Fd()))
 {
     std::thread loop([this]() { ReadLoop(); });
     read_thread_.swap(loop);

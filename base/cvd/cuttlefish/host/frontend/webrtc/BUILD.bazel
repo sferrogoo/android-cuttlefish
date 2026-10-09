@@ -53,6 +53,7 @@ cf_cc_library(
     include_cleaner_enabled = False,
     deps = [
         "//cuttlefish/common/libs/fs",
+        "//cuttlefish/common/libs/fs:fd",
         "//libbase",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:check",
@@ -88,6 +89,15 @@ cf_cc_library(
 )
 
 cf_cc_library(
+    name = "libcuttlefish_webrtc_audio_channel_matrix",
+    srcs = ["audio_channel_matrix.cpp"],
+    hdrs = ["audio_channel_matrix.h"],
+    deps = [
+        "@abseil-cpp//absl/log:check",
+    ],
+)
+
+cf_cc_library(
     name = "libcuttlefish_webrtc_audio_mixer",
     srcs = ["audio_mixer.cpp"],
     hdrs = ["audio_mixer.h"],
@@ -95,6 +105,7 @@ cf_cc_library(
     depend_on_what_you_use_enabled = False,
     include_cleaner_enabled = False,
     deps = [
+        ":libcuttlefish_webrtc_audio_channel_matrix",
         ":libcuttlefish_webrtc_audio_settings",
         "//cuttlefish/host/frontend/webrtc/libdevice:audio_sink",
         "//libbase",
@@ -121,6 +132,7 @@ cf_cc_library(
     include_cleaner_enabled = False,
     deps = [
         "//cuttlefish/common/libs/fs",
+        "//cuttlefish/common/libs/fs:fd",
         "//libbase",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:check",
@@ -264,7 +276,9 @@ cf_cc_library(
     include_cleaner_enabled = False,
     deps = [
         "//cuttlefish/common/libs/fs",
-        "//cuttlefish/host/commands/kernel_log_monitor:kernel_log_monitor_utils",
+        "//cuttlefish/common/libs/fs:fd",
+        "//cuttlefish/host/commands/kernel_log_monitor:kernel_log_server",
+        "//cuttlefish/host/commands/kernel_log_monitor:utils",
         "//cuttlefish/host/libs/config:config_constants",
         "//cuttlefish/host/libs/config:cuttlefish_config",
         "//cuttlefish/result",
@@ -398,7 +412,6 @@ cf_cc_binary(
         "//cuttlefish/common/libs/utils:json",
         "//cuttlefish/common/libs/utils:size_utils",
         "//cuttlefish/host/commands/assemble_cvd:guest_config_cc_proto",
-        "//cuttlefish/host/commands/kernel_log_monitor:kernel_log_monitor_utils",
         "//cuttlefish/host/frontend/webrtc/libcommon:audio_source",
         "//cuttlefish/host/frontend/webrtc/libdevice:audio_sink",
         "//cuttlefish/host/frontend/webrtc/libdevice:camera_controller",

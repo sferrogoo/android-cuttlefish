@@ -132,7 +132,6 @@ cf_cc_library(
         "//cuttlefish/host/commands/cvd/cache",
         "//cuttlefish/host/commands/cvd/cli:command_request",
         "//cuttlefish/host/commands/cvd/cli/commands:command_handler",
-        "//cuttlefish/host/commands/cvd/fetch:auto_login",
         "//cuttlefish/host/commands/cvd/fetch:build_api_flags",
         "//cuttlefish/host/commands/cvd/fetch:fetch_cvd",
         "//cuttlefish/host/commands/cvd/fetch:fetch_cvd_parser",
@@ -191,6 +190,29 @@ cf_cc_library(
 )
 
 cf_cc_library(
+    name = "event_devices",
+    srcs = ["event_devices.cpp"],
+    hdrs = ["event_devices.h"],
+    deps = [
+        "//cuttlefish/common/libs/fs:fd",
+        "//cuttlefish/flag_parser",
+        "//cuttlefish/host/commands/cvd/cli:command_request",
+        "//cuttlefish/host/commands/cvd/cli:help_format",
+        "//cuttlefish/host/commands/cvd/cli/commands:command_handler",
+        "//cuttlefish/host/commands/cvd/cli/selector",
+        "//cuttlefish/host/commands/cvd/instances",
+        "//cuttlefish/host/commands/cvd/instances:instance_manager",
+        "//cuttlefish/io:read_exact",
+        "//cuttlefish/io:reader",
+        "//cuttlefish/io:write_exact",
+        "//cuttlefish/io:writer",
+        "//cuttlefish/result",
+        "@abseil-cpp//absl/log",
+        "@abseil-cpp//absl/strings",
+    ],
+)
+
+cf_cc_library(
     name = "lint",
     srcs = ["lint.cpp"],
     hdrs = ["lint.h"],
@@ -209,7 +231,6 @@ cf_cc_library(
     hdrs = ["login.h"],
     deps = [
         "//cuttlefish/common/libs/utils:environment",
-        "//cuttlefish/common/libs/utils:is_google_corp",
         "//cuttlefish/flag_parser",
         "//cuttlefish/host/commands/cvd/cli:command_request",
         "//cuttlefish/host/commands/cvd/cli/commands:command_handler",

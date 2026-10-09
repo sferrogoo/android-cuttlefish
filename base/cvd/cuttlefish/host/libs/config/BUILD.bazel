@@ -1,4 +1,4 @@
-load("//cuttlefish/bazel:rules.bzl", "cf_cc_library")
+load("//cuttlefish/bazel:rules.bzl", "cf_cc_library", "cf_cc_test")
 
 package(
     default_visibility = ["//:android_cuttlefish"],
@@ -405,8 +405,9 @@ cf_cc_library(
     srcs = ["mkenvimage_slim.cc"],
     hdrs = ["mkenvimage_slim.h"],
     deps = [
-        "//cuttlefish/common/libs/fs",
+        "//cuttlefish/common/libs/fs:fd",
         "//cuttlefish/common/libs/utils:files",
+        "//cuttlefish/io:write_exact",
         "//cuttlefish/result:expect",
         "//cuttlefish/result:result_type",
         "@zlib",
@@ -421,6 +422,14 @@ cf_cc_library(
         "//cuttlefish/host/commands/cvdalloc:interface",
         "//cuttlefish/host/libs/config:cuttlefish_config",
         "@abseil-cpp//absl/strings",
+    ],
+)
+
+cf_cc_test(
+    name = "openwrt_args_test",
+    srcs = ["openwrt_args_test.cc"],
+    deps = [
+        "//cuttlefish/host/libs/config:openwrt_args",
     ],
 )
 
@@ -468,5 +477,16 @@ cf_cc_library(
         "//cuttlefish/result",
         "//libbase",
         "@abseil-cpp//absl/strings",
+    ],
+)
+
+cf_cc_test(
+    name = "media_test",
+    srcs = ["media_test.cpp"],
+    deps = [
+        ":cuttlefish_config",
+        ":media",
+        "//cuttlefish/result",
+        "//cuttlefish/result:result_matchers",
     ],
 )

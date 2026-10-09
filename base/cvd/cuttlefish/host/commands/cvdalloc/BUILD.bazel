@@ -36,6 +36,7 @@ cf_cc_library(
     srcs = ["privilege.cpp"],
     hdrs = ["privilege.h"],
     deps = [
+        "//cuttlefish/posix:stat",
         "//cuttlefish/posix:strerror",
         "//cuttlefish/result:expect",
         "//cuttlefish/result:result_type",
@@ -52,6 +53,7 @@ cf_cc_binary(
         ":sem",
         "//allocd:alloc_utils",
         "//cuttlefish/common/libs/fs",
+        "//cuttlefish/common/libs/fs:fd",
         "//cuttlefish/posix:strerror",
         "//cuttlefish/result:expect",
         "//cuttlefish/result:result_type",

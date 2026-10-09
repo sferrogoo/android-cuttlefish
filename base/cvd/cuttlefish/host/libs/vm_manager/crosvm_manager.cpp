@@ -160,6 +160,18 @@ CrosvmManager::ConfigureGraphics(
         {"androidboot.hardware.gltransport", "virtio-gpu-asg"},
         {"androidboot.opengles.version", "196609"},  // OpenGL ES 3.1
     };
+  } else if (instance.gpu_mode() == GpuMode::Venus) {
+    bootconfig_args = {
+        {"androidboot.cpuvulkan.version", "0"},
+        {"androidboot.hardware.gralloc", "minigbm"},
+        {"androidboot.hardware.guest_renderengine_backend", "skiavkthreaded"},
+        {"androidboot.hardware.hwcomposer", instance.hwcomposer()},
+        {"androidboot.hardware.hwcomposer.mode", "client"},
+        {"androidboot.hardware.hwcomposer.display_finder_mode", "drm"},
+        {"androidboot.hardware.egl", "angle"},
+        {"androidboot.hardware.vulkan", "virtio"},
+        {"androidboot.opengles.version", "196609"},  // OpenGL ES 3.1
+    };
   } else if (instance.gpu_mode() == GpuMode::None) {
     return {};
   } else {
@@ -557,6 +569,14 @@ Result<void> ConfigureGpu(const CuttlefishConfig& config, Command* crosvm_cmd) {
     crosvm_cmd->AddParameter("--gpu=", gpu_displays_string,
                              "context-types=" + instance.gpu_context_types(),
                              gpu_common_string);
+  } else if (gpu_mode == GpuMode::Venus) {
+    crosvm_cmd->AddParameter(
+        "--gpu=", gpu_displays_string, "fixed-blob-mapping=true,",
+        "backend=virglrenderer,vulkan=true,context-types=venus:cross-domain",
+        gpu_common_string, ",egl=false,gles=false,glx=false",
+        gpu_renderer_features_param);
+    crosvm_cmd->AddParameter("--gpu-render-server=path=",
+                             HostBinaryPath("virgl_render_server"));
   }
 
   CF_EXPECT(MaybeConfigureVulkanIcd(config, crosvm_cmd));
@@ -615,6 +635,19 @@ Result<std::vector<MonitorCommand>> CrosvmManager::StartCommands(
   crosvm_cmd.Cmd().AddParameter("run");
   crosvm_cmd.AddControlSocket(instance.CrosvmSocketPath(),
                               instance.crosvm_binary());
+
+  if (!instance.crosvm_acpi_table().empty()) {
+    crosvm_cmd.Cmd().AddParameter("--acpi-table=",
+                                  instance.crosvm_acpi_table());
+  }
+  if (!instance.crosvm_device_tree_overlay().empty()) {
+    crosvm_cmd.Cmd().AddParameter("--device-tree-overlay=",
+                                  instance.crosvm_device_tree_overlay());
+  }
+  if (!instance.crosvm_file_backed_mapping().empty()) {
+    crosvm_cmd.Cmd().AddParameter("--file-backed-mapping=",
+                                  instance.crosvm_file_backed_mapping());
+  }
 
   if (!config.kvm_path().empty()) {
     crosvm_cmd.AddKvmPath(config.kvm_path());
@@ -1089,11 +1122,12 @@ Result<std::vector<MonitorCommand>> CrosvmManager::StartCommands(
                                       gpu_capture_logs);
 
     commands.emplace_back(std::move(gpu_capture_log_tee_cmd));
-    commands.emplace_back(std::move(gpu_capture_command));
+    commands.emplace_back(std::move(gpu_capture_command),
+                          ProcessCategory::kVmm);
   } else {
     crosvm_cmd.Cmd().RedirectStdIO(Command::StdIoChannel::kStdOut, crosvm_logs);
     crosvm_cmd.Cmd().RedirectStdIO(Command::StdIoChannel::kStdErr, crosvm_logs);
-    commands.emplace_back(std::move(crosvm_cmd.Cmd()), true);
+    commands.emplace_back(std::move(crosvm_cmd.Cmd()), ProcessCategory::kVmm);
   }
 
   return commands;

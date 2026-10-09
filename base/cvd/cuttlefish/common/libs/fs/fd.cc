@@ -691,11 +691,12 @@ int Fd::Fsync() {
   return TEMP_FAILURE_RETRY(fsync(fd_));
 }
 
-Result<void> Fd::Flock(int operation) {
+Result<void, int> Fd::Flock(int operation) {
   LocalErrno record_errno(errno_);
 
-  CF_EXPECT(TEMP_FAILURE_RETRY(flock(fd_, operation)) == 0,
-            ::cuttlefish::StrError(errno));
+  CF_EXPECTVF(TEMP_FAILURE_RETRY(flock(fd_, operation)) >= 0, errno, "{}",
+              ::cuttlefish::StrError(errno));
+
   return {};
 }
 
@@ -883,7 +884,7 @@ Result<uint64_t> Fd::Write(const void* buf, size_t count) {
   LocalErrno record_errno(errno_);
 
   ssize_t res = TEMP_FAILURE_RETRY(write(fd_, buf, count));
-  CF_EXPECT_GE(res, 0);
+  CF_EXPECT_GE(res, 0, ::cuttlefish::StrError(errno));
 
   return static_cast<uint64_t>(res);
 }
@@ -892,7 +893,7 @@ Result<uint64_t> Fd::PWrite(const void* buf, size_t count, size_t offset) {
   LocalErrno record_errno(errno_);
 
   ssize_t res = TEMP_FAILURE_RETRY(pwrite(fd_, buf, count, offset));
-  CF_EXPECT_GE(res, 0);
+  CF_EXPECT_GE(res, 0, ::cuttlefish::StrError(errno));
 
   return static_cast<uint64_t>(res);
 }

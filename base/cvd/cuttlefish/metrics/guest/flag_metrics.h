@@ -33,8 +33,11 @@ struct FlagMetrics {
   GpuMode gpu_mode;
   bool guest_enforce_security;
   int memory_mb;
+  bool qemu_binary_specified;
   bool restart_subprocesses;
+  bool super_image_specified;
   bool system_image_dir_specified;
+  bool vendor_boot_image_specified;
 };
 
 Result<FlagMetrics> GetFlagMetrics(const ParsedFlags& parsed_flags,

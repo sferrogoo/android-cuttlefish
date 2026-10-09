@@ -7,8 +7,6 @@ package(
 cf_cc_binary(
     name = "cvd_internal_start",
     srcs = [
-        "filesystem_explorer.cc",
-        "filesystem_explorer.h",
         "flag_forwarder.cc",
         "flag_forwarder.h",
         "main.cc",
@@ -21,6 +19,7 @@ cf_cc_binary(
     include_cleaner_enabled = False,
     deps = [
         "//cuttlefish/common/libs/fs",
+        "//cuttlefish/common/libs/fs:fd",
         "//cuttlefish/common/libs/utils:environment",
         "//cuttlefish/common/libs/utils:gflags_xml_parser",
         "//cuttlefish/common/libs/utils:tee_logging",
@@ -35,6 +34,7 @@ cf_cc_binary(
         "//cuttlefish/host/libs/vm_manager",
         "//cuttlefish/metrics/io:notification",
         "//cuttlefish/posix:readlink",
+        "//cuttlefish/posix:strerror",
         "//cuttlefish/posix:symlink",
         "//cuttlefish/process:command",
         "//cuttlefish/process:managed_stdio",

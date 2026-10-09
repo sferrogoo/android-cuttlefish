@@ -344,6 +344,10 @@ class CuttlefishConfig {
 
     std::string touch_socket_path(int touch_dev_idx) const;
 
+    std::string touch_events_server_path(int touch_dev_idx) const;
+
+    std::string touch_capture_server_path(int touch_dev_idx) const;
+
     std::string media_socket_path(int index) const;
 
     std::string launcher_log_path() const;
@@ -363,7 +367,7 @@ class CuttlefishConfig {
 
     std::string ap_esp_image_path() const;
 
-    std::string esp_image_path() const;
+    std::string generated_esp_image_path() const;
 
     std::string audio_server_path() const;
 
@@ -402,6 +406,9 @@ class CuttlefishConfig {
     std::string crosvm_v4l2_proxy() const;
     bool use_pmem() const;
     bool enable_pkvm() const;
+    std::string crosvm_acpi_table() const;
+    std::string crosvm_device_tree_overlay() const;
+    std::string crosvm_file_backed_mapping() const;
 
     // Wifi MAC address inside the guest
     int wifi_mac_prefix() const;
@@ -483,6 +490,12 @@ class CuttlefishConfig {
     std::string ril_gateway() const;
     std::string ril_broadcast() const;
     uint8_t ril_prefixlen() const;
+    // Mobile network IPv6 info (RIL). Empty when IPv6 is not provided over
+    // the RIL for this instance.
+    std::string ril_ipv6_ipaddr() const;
+    std::string ril_ipv6_gateway() const;
+    std::string ril_ipv6_dns() const;
+    uint8_t ril_ipv6_prefixlen() const;
 
     std::string webrtc_assets_dir() const;
 
@@ -528,6 +541,7 @@ class CuttlefishConfig {
     bool has_vulkan_gfxstream_apex() const;
     bool has_vulkan_lavapipe_apex() const;
     bool has_vulkan_swiftshader_apex() const;
+    bool has_vulkan_venus_apex() const;
 
     std::string hwcomposer() const;
 
@@ -552,6 +566,7 @@ class CuttlefishConfig {
     std::string vvmtruststore_path() const;
     std::string default_target_zip() const;
     std::string system_target_zip() const;
+    std::string android_esp_image() const;
 
     // otheros artifacts
     std::string otheros_esp_image() const;
@@ -655,6 +670,9 @@ class CuttlefishConfig {
     void set_crosvm_v4l2_proxy(std::string v4l2_proxy);
     void set_use_pmem(bool use_pmem);
     void set_enable_pkvm(bool enable_pkvm);
+    void set_crosvm_acpi_table(const std::string& acpi_table);
+    void set_crosvm_device_tree_overlay(const std::string& device_tree_overlay);
+    void set_crosvm_file_backed_mapping(const std::string& file_backed_mapping);
     // Wifi MAC address inside the guest
     void set_wifi_mac_prefix(int wifi_mac_prefix);
     // Gnss grpc proxy server port inside the host
@@ -737,6 +755,10 @@ class CuttlefishConfig {
     void set_ril_gateway(const std::string& ril_gateway);
     void set_ril_broadcast(const std::string& ril_broadcast);
     void set_ril_prefixlen(uint8_t ril_prefixlen);
+    void set_ril_ipv6_ipaddr(const std::string& ril_ipv6_ipaddr);
+    void set_ril_ipv6_gateway(const std::string& ril_ipv6_gateway);
+    void set_ril_ipv6_dns(const std::string& ril_ipv6_dns);
+    void set_ril_ipv6_prefixlen(uint8_t ril_ipv6_prefixlen);
 
     // Configuration flags for a minimal device
     void set_enable_minimal_mode(bool enable_minimal_mode);
@@ -767,6 +789,7 @@ class CuttlefishConfig {
     void set_has_vulkan_gfxstream_apex(bool has_apex);
     void set_has_vulkan_lavapipe_apex(bool has_apex);
     void set_has_vulkan_swiftshader_apex(bool has_apex);
+    void set_has_vulkan_venus_apex(bool has_apex);
 
     void set_hwcomposer(const std::string&);
 
@@ -792,6 +815,7 @@ class CuttlefishConfig {
         const std::string& vbmeta_system_dlkm_image);
     void set_new_vbmeta_system_dlkm_image(
         const std::string& vbmeta_system_dlkm_image);
+    void set_android_esp_image(const std::string& android_esp_image);
     void set_vvmtruststore_path(const std::string& vvmtruststore_path);
     void set_default_target_zip(const std::string& default_target_zip);
     void set_system_target_zip(const std::string& system_target_zip);

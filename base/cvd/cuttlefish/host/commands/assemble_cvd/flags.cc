@@ -75,6 +75,7 @@
 #include "cuttlefish/host/commands/assemble_cvd/flags/mcu_config_path.h"
 #include "cuttlefish/host/commands/assemble_cvd/flags/memory_mb.h"
 #include "cuttlefish/host/commands/assemble_cvd/flags/parser.h"
+#include "cuttlefish/host/commands/assemble_cvd/flags/qemu_binary_dir.h"
 #include "cuttlefish/host/commands/assemble_cvd/flags/restart_subprocesses.h"
 #include "cuttlefish/host/commands/assemble_cvd/flags/super_image.h"
 #include "cuttlefish/host/commands/assemble_cvd/flags/system_image_dir.h"
@@ -622,10 +623,18 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
   std::vector<bool> smt_vec = CF_EXPECT(GET_FLAG_BOOL_VALUE(smt));
   std::vector<std::string> crosvm_binary_vec =
       CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_binary));
+  std::vector<std::string> crosvm_acpi_table_vec =
+      CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_acpi_table));
+  std::vector<std::string> crosvm_device_tree_overlay_vec =
+      CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_device_tree_overlay));
+  std::vector<std::string> crosvm_file_backed_mapping_vec =
+      CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_file_backed_mapping));
+  std::vector<std::string> crosvm_file_backed_mapping_base64_vec =
+      CF_EXPECT(GET_FLAG_STR_VALUE(crosvm_file_backed_mapping_base64));
   std::vector<std::string> seccomp_policy_dir_vec =
       CF_EXPECT(GET_FLAG_STR_VALUE(seccomp_policy_dir));
-  std::vector<std::string> qemu_binary_dir_vec =
-      CF_EXPECT(GET_FLAG_STR_VALUE(qemu_binary_dir));
+  QemuBinaryDirFlag qemu_binary_dir_values =
+      CF_EXPECT(QemuBinaryDirFlag::FromGlobalGflags());
 
   // new instance specific flags (moved from common flags)
   std::vector<std::string> gem5_binary_dir_vec =
@@ -778,19 +787,21 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
   auto num_to_webrtc_device_id_flag_map =
       CF_EXPECT(CreateNumToWebrtcDeviceIdMap(tmp_config_obj, instance_nums,
                                              FLAGS_webrtc_device_id));
-  size_t provided_serials_cnt =
-      std::count(FLAGS_serial_number.begin(), FLAGS_serial_number.end(), ',') +
-      1;
-  CF_EXPECTF(
-      provided_serials_cnt == 1 || provided_serials_cnt == instances_size,
-      "Must have a single serial number prefix or one serial number per "
-      "instance, have {} but expectected {}",
-      provided_serials_cnt, instances_size);
-  if (provided_serials_cnt == 1 && instances_size > 1) {
-    // Make sure the serial numbers are different when running multiple
-    // instances and using the default value for the flag
-    for (size_t i = 0; i < instance_nums.size(); ++i) {
-      serial_number_vec[i] += std::to_string(instance_nums[i]);
+  if (!FLAGS_serial_number.empty()) {
+    size_t provided_serials_cnt = std::count(FLAGS_serial_number.begin(),
+                                             FLAGS_serial_number.end(), ',') +
+                                  1;
+    CF_EXPECTF(
+        provided_serials_cnt == 1 || provided_serials_cnt == instances_size,
+        "Must have a single serial number prefix or one serial number per "
+        "instance, have {} but expectected {}",
+        provided_serials_cnt, instances_size);
+    if (provided_serials_cnt == 1 && instances_size > 1) {
+      // Make sure the serial numbers are different when running multiple
+      // instances and using the default value for the flag
+      for (size_t i = 0; i < instance_nums.size(); ++i) {
+        serial_number_vec[i] += std::to_string(instance_nums[i]);
+      }
     }
   }
   for (const auto& num : instance_nums) {
@@ -847,8 +858,21 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
     }
 
     instance.set_crosvm_binary(crosvm_binary_vec[instance_index]);
+    instance.set_crosvm_acpi_table(crosvm_acpi_table_vec[instance_index]);
+    instance.set_crosvm_device_tree_overlay(
+        crosvm_device_tree_overlay_vec[instance_index]);
+    instance.set_crosvm_file_backed_mapping(
+        crosvm_file_backed_mapping_vec[instance_index]);
+    if (!crosvm_file_backed_mapping_base64_vec[instance_index].empty()) {
+      std::vector<uint8_t> decoded_mapping = CF_EXPECT(
+          DecodeBase64(crosvm_file_backed_mapping_base64_vec[instance_index]));
+      std::string decoded_mapping_str(decoded_mapping.begin(),
+                                      decoded_mapping.end());
+      instance.set_crosvm_file_backed_mapping(decoded_mapping_str);
+    }
     instance.set_seccomp_policy_dir(seccomp_policy_dir_vec[instance_index]);
-    instance.set_qemu_binary_dir(qemu_binary_dir_vec[instance_index]);
+    instance.set_qemu_binary_dir(
+        qemu_binary_dir_values.ForIndex(instance_index));
 
     // wifi, bluetooth, Thread, connectivity setup
 
@@ -919,11 +943,13 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
     }
     instance.set_enable_pkvm(enable_pkvm_vec[instance_index]);
 
-    if (use_random_serial_vec[instance_index]) {
+    if (!serial_number_vec[instance_index].empty()) {
+      instance.set_serial_number(serial_number_vec[instance_index]);
+    } else if (use_random_serial_vec[instance_index]) {
       instance.set_serial_number(
           RandomSerialNumber("CFCVD" + std::to_string(num)));
     } else {
-      instance.set_serial_number(serial_number_vec[instance_index]);
+      instance.set_serial_number(StrForInstance("CUTTLEFISHCVD", num));
     }
 
     instance.set_grpc_socket_path(const_instance.PerInstanceGrpcSocketPath(""));
@@ -1054,6 +1080,13 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
     }
     instance.set_mobile_tap_name(iface_config.mobile_tap.name);
 
+    auto external_network_mode = CF_EXPECT(
+        ParseExternalNetworkMode(device_external_network_vec[instance_index]));
+    CF_EXPECT(external_network_mode == ExternalNetworkMode::kTap ||
+                  external_network_mode == ExternalNetworkMode::kSlirp,
+              "Unknown external_network_mode");
+    instance.set_external_network_mode(external_network_mode);
+
     CF_EXPECT(ConfigureNetworkSettings(
         ril_dns_vec[instance_index], tmp_config_obj, const_instance, instance));
 
@@ -1162,7 +1195,7 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
     }
 
     if (hwcomposer_vec[instance_index] == kHwComposerAuto) {
-      if (gpu_mode == GpuMode::DrmVirgl) {
+      if (gpu_mode == GpuMode::DrmVirgl || gpu_mode == GpuMode::Venus) {
         instance.set_hwcomposer(kHwComposerDrm);
       } else if (gpu_mode == GpuMode::None) {
         instance.set_hwcomposer(kHwComposerNone);
@@ -1193,10 +1226,12 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
     // then SetCommandLineOptionWithMode false as original code did,
     // otherwise keep default enable_sandbox value.
     // 3. Sepolicy rules need to be updated to support gpu mode. Temporarily
-    // disable auto-enabling sandbox when gpu is enabled (b/152323505).
+    // disable auto-enabling sandbox when gpu is enabled for gfxstream
+    // (b/152323505). This doesn't affect Venus, which can support full
+    // sandboxing.
     default_enable_sandbox += comma_str;
     default_enable_virtiofs += comma_str;
-    if (gpu_mode != GpuMode::GuestSwiftshader) {
+    if (gpu_mode != GpuMode::GuestSwiftshader && gpu_mode != GpuMode::Venus) {
       // original code, just moved to each instance setting block
       default_enable_sandbox += "false";
       default_enable_virtiofs += "false";
@@ -1331,13 +1366,6 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
       instance.set_modem_simulator_ports("");
     }
 
-    auto external_network_mode = CF_EXPECT(
-        ParseExternalNetworkMode(device_external_network_vec[instance_index]));
-    CF_EXPECT(external_network_mode == ExternalNetworkMode::kTap ||
-                  external_network_mode == ExternalNetworkMode::kSlirp,
-              "Unknown external_network_mode");
-    instance.set_external_network_mode(external_network_mode);
-
     instance.set_mcu(CF_EXPECT(mcu_config_paths.JsonForIndex(instance_index)));
 
     if (!vcpu_config_vec[instance_index].empty()) {
@@ -1356,10 +1384,12 @@ Result<CuttlefishConfig> InitializeCuttlefishConfiguration(
 
     instance.set_enable_tap_devices(enable_tap_devices_vec[instance_index]);
 
-    auto media_configs_bindings = injector.getMultibindings<MediaConfigs>();
+    const auto media_configs_bindings =
+        injector.getMultibindings<MediaConfigs>();
     CF_EXPECT_EQ(media_configs_bindings.size(), 1,
                  "Expected a single binding?");
-    auto media_configs = media_configs_bindings[0]->GetConfigs();
+    const std::vector<CuttlefishConfig::MediaConfig>& media_configs =
+        media_configs_bindings[0]->GetConfigs(instance_index);
     instance.set_media_configs(media_configs);
 
     instance_index++;

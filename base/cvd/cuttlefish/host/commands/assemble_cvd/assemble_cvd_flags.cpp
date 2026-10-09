@@ -214,8 +214,6 @@ DEFINE_vec(extra_bootconfig_args_base64, CF_DEFAULTS_EXTRA_BOOTCONFIG_ARGS,
            "This is base64 encoded version of extra_bootconfig_args"
            "Used for multi device clusters.");
 
-DEFINE_string(qemu_binary_dir, CF_DEFAULTS_QEMU_BINARY_DIR,
-              "Path to the directory containing the qemu binary to use");
 DEFINE_string(crosvm_binary, CF_DEFAULTS_CROSVM_BINARY,
               "The Crosvm binary to use");
 DEFINE_vec(gem5_binary_dir, CF_DEFAULTS_GEM5_BINARY_DIR,
@@ -390,6 +388,24 @@ DEFINE_vec(
 
 DEFINE_vec(use_pmem, "true",
            "Make this flag false to disable pmem with crosvm");
+
+DEFINE_vec(crosvm_acpi_table, "",
+           "Passed directly to crosvm as --acpi-table. "
+           "Path to user provided ACPI table");
+
+DEFINE_vec(crosvm_device_tree_overlay, "",
+           "Passed directly to crosvm as --device-tree-overlay. "
+           "Path to user provided device tree overlay");
+
+DEFINE_vec(crosvm_file_backed_mapping, "",
+           "Passed directly to crosvm as --file-backed-mapping. "
+           "Map the given file into guest memory at the specified address. "
+           "Parameters (addr, size, path are required): "
+           "addr=NUM,size=NUM,path=PATH,offset=NUM,rw,sync,align,ram");
+
+DEFINE_vec(crosvm_file_backed_mapping_base64, "",
+           "This is base64 encoded version of crosvm_file_backed_mapping. "
+           "Used for multi device clusters.");
 
 DEFINE_vec(enable_wifi, fmt::format("{}", CF_DEFAULTS_ENABLE_WIFI),
            "Enables the guest WIFI. Mainly for Minidroid");

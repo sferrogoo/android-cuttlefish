@@ -231,6 +231,14 @@ void CuttlefishConfig::MutableInstanceSpecific::
     set_new_vbmeta_system_dlkm_image(const std::string& image) {
   (*Dictionary())[kNewVbmetaSystemDlkmImage] = image;
 }
+static constexpr char kAndroidEspImage[] = "android_esp_image";
+std::string CuttlefishConfig::InstanceSpecific::android_esp_image() const {
+  return (*Dictionary())[kAndroidEspImage].asString();
+}
+void CuttlefishConfig::MutableInstanceSpecific::set_android_esp_image(
+    const std::string& android_esp_image) {
+  (*Dictionary())[kAndroidEspImage] = android_esp_image;
+}
 static constexpr char kOtherosEspImage[] = "otheros_esp_image";
 std::string CuttlefishConfig::InstanceSpecific::otheros_esp_image() const {
   return (*Dictionary())[kOtherosEspImage].asString();
@@ -902,6 +910,15 @@ bool CuttlefishConfig::InstanceSpecific::has_vulkan_swiftshader_apex() const {
   return (*Dictionary())[kHasVulkanSwiftshaderApex].asBool();
 }
 
+static constexpr char kHasVulkanVenusApex[] = "has_vulkan_venus_apex";
+void CuttlefishConfig::MutableInstanceSpecific::set_has_vulkan_venus_apex(
+    const bool has_apex) {
+  (*Dictionary())[kHasVulkanVenusApex] = has_apex;
+}
+bool CuttlefishConfig::InstanceSpecific::has_vulkan_venus_apex() const {
+  return (*Dictionary())[kHasVulkanVenusApex].asBool();
+}
+
 static constexpr char kEnableAudio[] = "enable_audio";
 void CuttlefishConfig::MutableInstanceSpecific::set_enable_audio(bool enable) {
   (*Dictionary())[kEnableAudio] = enable;
@@ -1254,6 +1271,43 @@ uint8_t CuttlefishConfig::InstanceSpecific::ril_prefixlen() const {
   return static_cast<uint8_t>((*Dictionary())[kRilPrefixlen].asUInt());
 }
 
+static constexpr char kRilIpv6Ipaddr[] = "ril_ipv6_ipaddr";
+void CuttlefishConfig::MutableInstanceSpecific::set_ril_ipv6_ipaddr(
+    const std::string& ril_ipv6_ipaddr) {
+  (*Dictionary())[kRilIpv6Ipaddr] = ril_ipv6_ipaddr;
+}
+std::string CuttlefishConfig::InstanceSpecific::ril_ipv6_ipaddr() const {
+  return (*Dictionary())[kRilIpv6Ipaddr].asString();
+}
+
+static constexpr char kRilIpv6Gateway[] = "ril_ipv6_gateway";
+void CuttlefishConfig::MutableInstanceSpecific::set_ril_ipv6_gateway(
+    const std::string& ril_ipv6_gateway) {
+  (*Dictionary())[kRilIpv6Gateway] = ril_ipv6_gateway;
+}
+std::string CuttlefishConfig::InstanceSpecific::ril_ipv6_gateway() const {
+  return (*Dictionary())[kRilIpv6Gateway].asString();
+}
+
+static constexpr char kRilIpv6Dns[] = "ril_ipv6_dns";
+void CuttlefishConfig::MutableInstanceSpecific::set_ril_ipv6_dns(
+    const std::string& ril_ipv6_dns) {
+  (*Dictionary())[kRilIpv6Dns] = ril_ipv6_dns;
+}
+std::string CuttlefishConfig::InstanceSpecific::ril_ipv6_dns() const {
+  return (*Dictionary())[kRilIpv6Dns].asString();
+}
+
+static constexpr char kRilIpv6Prefixlen[] = "ril_ipv6_prefixlen";
+void CuttlefishConfig::MutableInstanceSpecific::set_ril_ipv6_prefixlen(
+    uint8_t ril_ipv6_prefixlen) {
+  (*Dictionary())[kRilIpv6Prefixlen] =
+      static_cast<Json::UInt>(ril_ipv6_prefixlen);
+}
+uint8_t CuttlefishConfig::InstanceSpecific::ril_ipv6_prefixlen() const {
+  return static_cast<uint8_t>((*Dictionary())[kRilIpv6Prefixlen].asUInt());
+}
+
 static constexpr char kDisplayConfigs[] = "display_configs";
 static constexpr char kXRes[] = "x_res";
 static constexpr char kYRes[] = "y_res";
@@ -1454,7 +1508,8 @@ std::string CuttlefishConfig::InstanceSpecific::ap_uboot_env_image_path()
   return AbsolutePath(PerInstancePath("ap_uboot_env.img"));
 }
 
-std::string CuttlefishConfig::InstanceSpecific::esp_image_path() const {
+std::string CuttlefishConfig::InstanceSpecific::generated_esp_image_path()
+    const {
   return AbsolutePath(PerInstancePath("esp.img"));
 }
 
@@ -1469,7 +1524,10 @@ std::string CuttlefishConfig::InstanceSpecific::audio_server_path() const {
 }
 
 BootFlow CuttlefishConfig::InstanceSpecific::boot_flow() const {
-  const bool android_efi_loader_flow_used = !android_efi_loader().empty();
+  // The android_esp image is either generated from the EFI loader or
+  // prebuilt by the Android build.
+  const bool android_efi_loader_flow_used =
+      !android_efi_loader().empty() || !android_esp_image().empty();
 
   const bool chromeos_disk_flow_used = !chromeos_disk().empty();
 
@@ -1910,6 +1968,35 @@ bool CuttlefishConfig::InstanceSpecific::enable_pkvm() const {
   return (*Dictionary())[kEnablePkvm].asBool();
 }
 
+static constexpr char kCrosvmAcpiTable[] = "crosvm_acpi_table";
+void CuttlefishConfig::MutableInstanceSpecific::set_crosvm_acpi_table(
+    const std::string& acpi_table) {
+  (*Dictionary())[kCrosvmAcpiTable] = acpi_table;
+}
+std::string CuttlefishConfig::InstanceSpecific::crosvm_acpi_table() const {
+  return (*Dictionary())[kCrosvmAcpiTable].asString();
+}
+
+static constexpr char kCrosvmDeviceTreeOverlay[] = "crosvm_device_tree_overlay";
+void CuttlefishConfig::MutableInstanceSpecific::set_crosvm_device_tree_overlay(
+    const std::string& device_tree_overlay) {
+  (*Dictionary())[kCrosvmDeviceTreeOverlay] = device_tree_overlay;
+}
+std::string CuttlefishConfig::InstanceSpecific::crosvm_device_tree_overlay()
+    const {
+  return (*Dictionary())[kCrosvmDeviceTreeOverlay].asString();
+}
+
+static constexpr char kCrosvmFileBackedMapping[] = "crosvm_file_backed_mapping";
+void CuttlefishConfig::MutableInstanceSpecific::set_crosvm_file_backed_mapping(
+    const std::string& file_backed_mapping) {
+  (*Dictionary())[kCrosvmFileBackedMapping] = file_backed_mapping;
+}
+std::string CuttlefishConfig::InstanceSpecific::crosvm_file_backed_mapping()
+    const {
+  return (*Dictionary())[kCrosvmFileBackedMapping].asString();
+}
+
 static constexpr char kEnableTapDevices[] = "enable_tap_devices";
 void CuttlefishConfig::MutableInstanceSpecific::set_enable_tap_devices(
     const bool enable_tap_devices) {
@@ -1922,6 +2009,18 @@ bool CuttlefishConfig::InstanceSpecific::enable_tap_devices() const {
 std::string CuttlefishConfig::InstanceSpecific::touch_socket_path(
     int touch_dev_idx) const {
   std::string name = absl::StrCat("touch_", touch_dev_idx, ".sock");
+  return PerInstanceInternalUdsPath(name);
+}
+
+std::string CuttlefishConfig::InstanceSpecific::touch_events_server_path(
+    int touch_dev_idx) const {
+  std::string name = absl::StrCat("touch_", touch_dev_idx, ".events.in");
+  return PerInstanceInternalUdsPath(name);
+}
+
+std::string CuttlefishConfig::InstanceSpecific::touch_capture_server_path(
+    int touch_dev_idx) const {
+  std::string name = absl::StrCat("touch_", touch_dev_idx, ".events.out");
   return PerInstanceInternalUdsPath(name);
 }
 

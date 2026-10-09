@@ -27,6 +27,7 @@
 
 #include "absl/cleanup/cleanup.h"
 
+#include "cuttlefish/common/libs/fs/fd.h"
 #include "cuttlefish/common/libs/fs/shared_fd.h"
 #include "cuttlefish/common/libs/fs/shared_select.h"
 #include "cuttlefish/posix/strerror.h"
@@ -35,11 +36,11 @@
 namespace cuttlefish {
 
 InterruptibleTerminal::InterruptibleTerminal()
-    : interrupt_event_fd_(SharedFD::Event()) {}
+    : interrupt_event_fd_(Fd::Event().value_or(Fd())) {}
 
 // only up to one thread can call this function
 Result<std::string> InterruptibleTerminal::ReadLine() {
-  SharedFD stdin_fd = SharedFD::Dup(0);
+  SharedFD stdin_fd = CF_EXPECT(Fd::Dup(0));
   {
     std::lock_guard lock(terminal_mutex_);
     CF_EXPECT(interrupted_ == false, "Interrupted");

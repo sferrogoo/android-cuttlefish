@@ -125,6 +125,7 @@ cf_cc_library(
         "//cuttlefish/posix:realpath",
         "//cuttlefish/posix:remove",
         "//cuttlefish/posix:rename",
+        "//cuttlefish/posix:stat",
         "//cuttlefish/posix:strerror",
         "//cuttlefish/result",
         "//libbase",
@@ -225,7 +226,7 @@ cf_cc_library(
     hdrs = ["json.h"],
     deps = [
         "//cuttlefish/common/libs/fs:fd",
-        "//cuttlefish/io",
+        "//cuttlefish/io:reader",
         "//cuttlefish/io:string",
         "//cuttlefish/result",
         "@jsoncpp",
@@ -362,6 +363,7 @@ cf_cc_library(
     hdrs = ["unix_sockets.h"],
     deps = [
         "//cuttlefish/common/libs/fs",
+        "//cuttlefish/common/libs/fs:fd",
         "//cuttlefish/result",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:check",

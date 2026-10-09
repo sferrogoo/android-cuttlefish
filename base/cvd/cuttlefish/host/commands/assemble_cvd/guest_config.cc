@@ -101,8 +101,9 @@ Result<void> ParseGuestConfigTextProto(const std::string& guest_config_path,
   CF_EXPECT(file_descriptor >= 0);
 
   google::protobuf::io::FileInputStream file_stream(file_descriptor);
-  const auto result =
-      google::protobuf::TextFormat::Parse(&file_stream, &proto_config);
+  google::protobuf::TextFormat::Parser parser;
+  parser.AllowUnknownField(true);
+  const bool result = parser.Parse(&file_stream, &proto_config);
   CF_EXPECT(close(file_descriptor) == 0);
   CF_EXPECT(result == true);
 
@@ -149,6 +150,10 @@ Result<void> ParseGuestConfigTextProto(const std::string& guest_config_path,
   if (graphics_config.has_vulkan_swiftshader_apex_supported()) {
     guest_config.has_vulkan_swiftshader_apex =
         graphics_config.vulkan_swiftshader_apex_supported();
+  }
+  if (graphics_config.has_vulkan_venus_apex_supported()) {
+    guest_config.has_vulkan_venus_apex =
+        graphics_config.vulkan_venus_apex_supported();
   }
 
   const auto& input_config = proto_config.input();
@@ -248,6 +253,8 @@ Result<void> ParseGuestConfigTxt(const std::string& guest_config_path,
       MapHasValue(info, "vulkan_lavapipe_apex", "supported");
   guest_config.has_vulkan_swiftshader_apex =
       MapHasValue(info, "vulkan_swiftshader_apex", "supported");
+  guest_config.has_vulkan_venus_apex =
+      MapHasValue(info, "vulkan_venus_apex", "supported");
 
   guest_config.mouse_supported = MapHasValue(info, "mouse", "supported");
 

@@ -25,7 +25,6 @@ cf_cc_binary(
     name = "assemble_cvd",
     srcs = ["assemble_cvd.cc"],
     deps = [
-        "//cuttlefish/common/libs/fs",
         "//cuttlefish/common/libs/fs:fd",
         "//cuttlefish/common/libs/utils:contains",
         "//cuttlefish/common/libs/utils:environment",
@@ -86,7 +85,7 @@ cf_cc_binary(
         "//cuttlefish/host/libs/feature",
         "//cuttlefish/host/libs/feature:inject",
         "//cuttlefish/host/libs/log_names",
-        "//cuttlefish/io:string",
+        "//cuttlefish/io:write_exact",
         "//cuttlefish/posix:remove",
         "//cuttlefish/posix:symlink",
         "//cuttlefish/pretty:vector",
@@ -147,9 +146,10 @@ cf_cc_library(
         "//cuttlefish/io:length",
         "//cuttlefish/io:lz4_legacy",
         "//cuttlefish/io:native_filesystem",
-        "//cuttlefish/io:shared_fd",
+        "//cuttlefish/io:reader",
         "//cuttlefish/io:string",
         "//cuttlefish/io:write_exact",
+        "//cuttlefish/io:writer",
         "//cuttlefish/posix:remove",
         "//cuttlefish/process:command",
         "//cuttlefish/process:execute",
@@ -189,6 +189,7 @@ cf_cc_library(
         "//cuttlefish/common/libs/utils:in_sandbox",
         "//cuttlefish/files:directory_contents",
         "//cuttlefish/host/libs/config:config_utils",
+        "//cuttlefish/posix:stat",
         "//cuttlefish/posix:strerror",
         "//cuttlefish/process:proc_file_utils",
         "//cuttlefish/result",
@@ -265,6 +266,7 @@ cf_cc_library(
     srcs = ["disk_image_flags_vectorization.cc"],
     hdrs = ["disk_image_flags_vectorization.h"],
     deps = [
+        "//cuttlefish/files:file_exists",
         "//cuttlefish/host/commands/assemble_cvd:assemble_cvd_flags",
         "//cuttlefish/host/commands/assemble_cvd:super_image_mixer",
         "//cuttlefish/host/commands/assemble_cvd/flags:android_efi_loader",
@@ -275,9 +277,11 @@ cf_cc_library(
         "//cuttlefish/host/commands/assemble_cvd/flags:super_image",
         "//cuttlefish/host/commands/assemble_cvd/flags:system_image_dir",
         "//cuttlefish/host/commands/assemble_cvd/flags:vendor_boot_image",
+        "//cuttlefish/host/libs/config:boot_flow",
         "//cuttlefish/host/libs/config:cuttlefish_config",
         "//cuttlefish/host/libs/config:fetcher_configs",
         "//cuttlefish/host/libs/config:instance_nums",
+        "//cuttlefish/host/libs/config:vmm_mode",
         "//cuttlefish/result",
         "@abseil-cpp//absl/strings",
     ],
@@ -356,6 +360,7 @@ cf_cc_library(
         "//cuttlefish/host/commands/assemble_cvd/flags:mcu_config_path",
         "//cuttlefish/host/commands/assemble_cvd/flags:memory_mb",
         "//cuttlefish/host/commands/assemble_cvd/flags:parser",
+        "//cuttlefish/host/commands/assemble_cvd/flags:qemu_binary_dir",
         "//cuttlefish/host/commands/assemble_cvd/flags:restart_subprocesses",
         "//cuttlefish/host/commands/assemble_cvd/flags:super_image",
         "//cuttlefish/host/commands/assemble_cvd/flags:system_image_dir",
@@ -552,6 +557,14 @@ cf_cc_library(
     ],
 )
 
+cf_cc_test(
+    name = "network_flags_test",
+    srcs = ["network_flags_test.cc"],
+    deps = [
+        "//cuttlefish/host/commands/assemble_cvd:network_flags",
+    ],
+)
+
 cf_cc_library(
     name = "required_directories",
     srcs = ["required_directories.cc"],
@@ -628,6 +641,7 @@ cf_cc_library(
     hdrs = ["vendor_dlkm_utils.h"],
     deps = [
         "//cuttlefish/common/libs/fs",
+        "//cuttlefish/common/libs/fs:fd",
         "//cuttlefish/common/libs/utils:contains",
         "//cuttlefish/common/libs/utils:disk_usage",
         "//cuttlefish/common/libs/utils:environment",
@@ -639,7 +653,7 @@ cf_cc_library(
         "//cuttlefish/host/libs/avb",
         "//cuttlefish/host/libs/config:config_utils",
         "//cuttlefish/host/libs/config:known_paths",
-        "//cuttlefish/io:shared_fd",
+        "//cuttlefish/io:write_exact",
         "//cuttlefish/process:command",
         "//cuttlefish/process:execute",
         "//cuttlefish/result",
@@ -674,6 +688,7 @@ cf_cc_library(
         "//cuttlefish/host/libs/config:config_flag",
         "//cuttlefish/host/libs/config:config_fragment",
         "//cuttlefish/host/libs/config:cuttlefish_config",
+        "//cuttlefish/host/libs/config:instance_nums",
         "//cuttlefish/host/libs/config:media",
         "//cuttlefish/host/libs/feature",
         "//cuttlefish/result",

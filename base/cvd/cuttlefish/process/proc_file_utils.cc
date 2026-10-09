@@ -37,12 +37,14 @@
 #include "fmt/core.h"
 #include "fmt/format.h"
 
+#include "cuttlefish/common/libs/fs/fd.h"
 #include "cuttlefish/common/libs/fs/shared_buf.h"
 #include "cuttlefish/common/libs/fs/shared_fd.h"
 #include "cuttlefish/common/libs/utils/files.h"
 #include "cuttlefish/files/directory_contents.h"
 #include "cuttlefish/files/directory_exists.h"
 #include "cuttlefish/posix/readlink.h"
+#include "cuttlefish/posix/stat.h"
 #include "cuttlefish/result/result.h"
 
 namespace cuttlefish {
@@ -50,10 +52,7 @@ namespace cuttlefish {
 // sometimes, files under /proc/<pid> owned by a different user
 // e.g. /proc/<pid>/exe
 static Result<uid_t> FileOwnerUid(const std::string& file_path) {
-  // NOLINTNEXTLINE(misc-include-cleaner): <sys/stat.h>
-  struct stat buf;
-  CF_EXPECT_EQ(::stat(file_path.data(), &buf), 0);
-  return buf.st_uid;
+  return CF_EXPECT(Stat(file_path)).st_uid;
 }
 
 struct ProcStatusUids {
@@ -107,8 +106,7 @@ static std::string PidDirPath(const pid_t pid) {
  * which is not the case here.
  */
 static Result<std::string> ReadAll(const std::string& file_path) {
-  SharedFD fd = SharedFD::Open(file_path, O_RDONLY);
-  CF_EXPECT(fd->IsOpen());
+  SharedFD fd = CF_EXPECT(Fd::Open(file_path, O_RDONLY));
   // should be good size to read all Envs or Args,
   // whichever bigger
   const int buf_size = 1024;

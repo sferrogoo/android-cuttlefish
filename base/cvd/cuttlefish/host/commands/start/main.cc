@@ -13,11 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <errno.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include <optional>
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "absl/base/no_destructor.h"
 #include "absl/log/check.h"
@@ -28,6 +34,7 @@
 #include "fmt/format.h"
 #include "gflags/gflags.h"
 
+#include "cuttlefish/common/libs/fs/fd.h"
 #include "cuttlefish/common/libs/fs/shared_fd.h"
 #include "cuttlefish/common/libs/utils/environment.h"
 #include "cuttlefish/common/libs/utils/files.h"
@@ -35,18 +42,17 @@
 #include "cuttlefish/files/file_exists.h"
 #include "cuttlefish/flag_parser/flag.h"
 #include "cuttlefish/flag_parser/gflags_compat.h"
-#include "cuttlefish/host/commands/start/filesystem_explorer.h"
 #include "cuttlefish/host/commands/start/flag_forwarder.h"
 #include "cuttlefish/host/commands/start/override_bool_arg.h"
 #include "cuttlefish/host/commands/start/start_flags.h"
 #include "cuttlefish/host/libs/config/config_constants.h"
 #include "cuttlefish/host/libs/config/config_utils.h"
 #include "cuttlefish/host/libs/config/cuttlefish_config.h"
-#include "cuttlefish/host/libs/config/fetcher_config.h"
 #include "cuttlefish/host/libs/config/host_tools_version.h"
 #include "cuttlefish/host/libs/config/instance_nums.h"
 #include "cuttlefish/host/libs/log_names/log_names.h"
 #include "cuttlefish/posix/readlink.h"
+#include "cuttlefish/posix/strerror.h"
 #include "cuttlefish/posix/symlink.h"
 #include "cuttlefish/process/command.h"
 #include "cuttlefish/process/managed_stdio.h"
@@ -97,15 +103,12 @@ std::string SubtoolPath(const std::string& subtool_base) {
 std::string AssemblerPath() { return SubtoolPath("assemble_cvd"); }
 std::string RunnerPath() { return SubtoolPath("run_cvd"); }
 
-int InvokeAssembler(const std::string& assembler_stdin,
-                    std::string& assembler_stdout,
-                    const std::vector<std::string>& argv) {
+Result<std::string> InvokeAssembler(const std::vector<std::string>& argv) {
   Command assemble_cmd(AssemblerPath());
   for (const auto& arg : argv) {
     assemble_cmd.AddParameter(arg);
   }
-  return RunWithManagedStdio(std::move(assemble_cmd), &assembler_stdin,
-                             &assembler_stdout, nullptr);
+  return CF_EXPECT(RunAndCaptureStdout(std::move(assemble_cmd)));
 }
 
 Subprocess StartRunner(SharedFD runner_stdin,
@@ -118,14 +121,6 @@ Subprocess StartRunner(SharedFD runner_stdin,
   run_cmd.RedirectStdIO(Command::StdIoChannel::kStdIn, runner_stdin);
   run_cmd.SetWorkingDirectory(instance.instance_dir());
   return run_cmd.Start();
-}
-
-std::string WriteFiles(FetcherConfig fetcher_config) {
-  std::stringstream output_streambuf;
-  for (const auto& file : fetcher_config.get_cvd_files()) {
-    output_streambuf << file.first << "\n";
-  }
-  return output_streambuf.str();
 }
 
 bool HostToolsUpdated() {
@@ -250,6 +245,13 @@ void ExecCvd(std::vector<std::string> args) {
   }
   args_cstr.push_back(nullptr);
 
+  const std::string invoker_name = "CVD_INVOKER";
+  const std::string invoker_value = "launch_cvd";
+  const int enable_overwrite = 1;
+  const int return_value =
+      setenv(invoker_name.c_str(), invoker_value.c_str(), enable_overwrite);
+  CHECK(return_value == 0) << StrError(errno);
+
   const std::string cvd_path = CvdPath();
   execv(cvd_path.c_str(), args_cstr.data());
   PLOG(FATAL) << "execv(cvd) failed";
@@ -342,22 +344,19 @@ int CvdInternalStartMain(int argc, char** argv) {
          /* overwrite */ 0);
 #endif
 
-  auto assembler_input = WriteFiles(AvailableFilesReport());
-  std::string assembler_output;
-  auto assemble_ret =
-      InvokeAssembler(assembler_input, assembler_output,
-                      forwarder.ArgvForSubprocess(AssemblerPath(), args));
+  Result<std::string> assembler_output =
+      InvokeAssembler(forwarder.ArgvForSubprocess(AssemblerPath(), args));
 
-  if (assemble_ret != 0) {
-    LOG(ERROR) << "assemble_cvd returned " << assemble_ret;
-    return assemble_ret;
+  if (!assembler_output.has_value()) {
+    LOG(ERROR) << "Error running assemble_cvd" << assembler_output.error();
+    return -1;
   } else {
     VLOG(0) << "assemble_cvd exited successfully.";
   }
 
   std::string conf_path;
   for (std::string_view line :
-       absl::StrSplit(assembler_output, '\n', absl::SkipEmpty())) {
+       absl::StrSplit(*assembler_output, '\n', absl::SkipEmpty())) {
     if (absl::EndsWith(line, "cuttlefish_config.json")) {
       conf_path = line;
     }
@@ -373,7 +372,7 @@ int CvdInternalStartMain(int argc, char** argv) {
     if (!link_res.has_value()) {
       LOG(ERROR) << "Failed to link logs to instance dir: " << link_res.error();
     }
-    SharedFD runner_stdin = SharedFD::Open("/dev/null", O_RDONLY);
+    SharedFD runner_stdin = Fd::Open("/dev/null", O_RDONLY).value_or(Fd());
     CHECK(runner_stdin->IsOpen()) << runner_stdin->StrError();
     setenv(kCuttlefishInstanceEnvVarName, instance.id().c_str(),
            /* overwrite */ 1);

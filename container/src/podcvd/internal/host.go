@@ -88,14 +88,14 @@ func ExecFetchCmdOnDisposableHost(ccm CuttlefishContainerManager, cvdArgs *CvdAr
 		return fmt.Errorf("failed to get cvd data home: %w", err)
 	}
 	if err := os.MkdirAll(cvdDataHome, 0755); err != nil {
-		return fmt.Errorf("failed to eusure directory at %q: %w", cvdDataHome, err)
+		return fmt.Errorf("failed to ensure directory at %q: %w", cvdDataHome, err)
 	}
 	cacheDir := hostCacheDir()
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return fmt.Errorf("failed to ensure cache directory at %q: %w", cacheDir, err)
 	}
-	targetDir := cvdArgs.GetStringFlagValueOnSubCommandArgs("target_directory")
-	if targetDir == "" {
+	targetDir, exists := cvdArgs.GetStringFlagValueOnSubCommandArgs("target_directory")
+	if !exists {
 		return fmt.Errorf("target_directory is missing")
 	}
 	if info, err := os.Stat(targetDir); err != nil || !info.IsDir() {
@@ -129,7 +129,7 @@ type HostExecResult struct {
 }
 
 func ExecOnAllCuttlefishHosts(ccm CuttlefishContainerManager, subcommandArgs []string, stderr io.Writer) ([]HostExecResult, error) {
-	groupNameIpAddrMap, err := Ipv4AddressesByGroupNames(ccm, false)
+	groupNameIpAddrMap, err := Ipv4AddressesByGroupNames(ccm, false, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get IPv4 addresses for group names: %w", err)
 	}
@@ -182,7 +182,29 @@ func pullContainerImage(ccm CuttlefishContainerManager) error {
 		return nil
 	}
 	log.Printf("Pulling container image %q...\n", imageName)
-	return ccm.PullImage(context.Background(), imageName)
+	if err := ccm.PullImage(context.Background(), imageName); err != nil {
+		return err
+	}
+	return pruneOldContainerImages(ccm)
+}
+
+func pruneOldContainerImages(ccm CuttlefishContainerManager) error {
+	i := strings.LastIndex(imageName, ":")
+	if i == -1 {
+		return fmt.Errorf("invalid image name %q: missing tag", imageName)
+	}
+	repo, currentTag := imageName[:i], imageName[i+1:]
+	tags, err := ccm.ListTags(context.Background(), repo)
+	if err != nil {
+		return err
+	}
+	var oldImages []string
+	for _, tag := range tags {
+		if tag != currentTag {
+			oldImages = append(oldImages, repo+":"+tag)
+		}
+	}
+	return ccm.RemoveImages(context.Background(), oldImages)
 }
 
 func cvdDataHome() (string, error) {
@@ -244,8 +266,8 @@ func extractPaths(data any) []string {
 }
 
 func mountablePathsFromConfigFile(cvdArgs *CvdArgs) []string {
-	configFile := cvdArgs.GetStringFlagValueOnSubCommandArgs("config_file")
-	if configFile == "" {
+	configFile, exists := cvdArgs.GetStringFlagValueOnSubCommandArgs("config_file")
+	if !exists {
 		return nil
 	}
 	absConfigFile := resolveHostPath(configFile)
@@ -264,12 +286,12 @@ func mountablePathsFromConfigFile(cvdArgs *CvdArgs) []string {
 	return extractPaths(data)
 }
 
-func collectMountSpecs(pathsToMount []string, hostOut, productOut, cvdDataHome, podcvdHomeDir, cacheDir string) []string {
+func collectMountSpecs(pathsToMount []string, hostOut, productOut, cvdDataHome, podcvdBaseDir, cacheDir string) []string {
 	bindMap := make(map[string]string)
 	bindMap["/host_out"] = fmt.Sprintf("%s:/host_out:O", hostOut)
 	bindMap["/product_out"] = fmt.Sprintf("%s:/product_out:O", productOut)
 	bindMap["/root/.local/share/cvd"] = fmt.Sprintf("%s:/root/.local/share/cvd:ro", cvdDataHome)
-	bindMap["/podcvd_home"] = fmt.Sprintf("%s:/podcvd_home:rw", podcvdHomeDir)
+	bindMap["/podcvd_base"] = fmt.Sprintf("%s:/podcvd_base:rw", podcvdBaseDir)
 	bindMap["/var/tmp/cvd/0/cache"] = fmt.Sprintf("%s:/var/tmp/cvd/0/cache:rw", cacheDir)
 	bindMap["/etc/cuttlefish-common/operator/cert/cert.pem"] = "/etc/cuttlefish-podcvd/cert.pem:/etc/cuttlefish-common/operator/cert/cert.pem:ro"
 	bindMap["/etc/cuttlefish-common/operator/cert/key.pem"] = "/etc/cuttlefish-podcvd/key.pem:/etc/cuttlefish-common/operator/cert/key.pem:ro"
@@ -366,7 +388,7 @@ func createAndStartContainer(ccm CuttlefishContainerManager, cvdArgs *CvdArgs) (
 		return "", fmt.Errorf("failed to get cvd data home: %w", err)
 	}
 	if err := os.MkdirAll(cvdDataHome, 0755); err != nil {
-		return "", fmt.Errorf("failed to eusure directory at %q: %w", cvdDataHome, err)
+		return "", fmt.Errorf("failed to ensure directory at %q: %w", cvdDataHome, err)
 	}
 	cacheDir := hostCacheDir()
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
@@ -388,7 +410,20 @@ func createAndStartContainer(ccm CuttlefishContainerManager, cvdArgs *CvdArgs) (
 	if err := os.MkdirAll(podcvdRootDir, 0777); err != nil {
 		return "", fmt.Errorf("failed to create podcvd root dir: %w", err)
 	}
-	podcvdHomeDir := filepath.Join(podcvdRootDir, strconv.Itoa(os.Getuid()), attemptID)
+	baseDir, exists := cvdArgs.GetStringFlagValueOnSubCommandArgs("base_directory")
+	if exists {
+		cvdArgs.RemoveFlagValueOnSubCommandArgs("base_directory")
+	} else {
+		baseDir = filepath.Join(podcvdRootDir, strconv.Itoa(os.Getuid()), attemptID)
+	}
+	podcvdBaseDir, err := filepath.Abs(baseDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve absolute path for base directory %q: %w", baseDir, err)
+	}
+	if err := os.MkdirAll(podcvdBaseDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create podcvd base dir: %w", err)
+	}
+	podcvdHomeDir := filepath.Join(podcvdBaseDir, "home")
 	if err := os.MkdirAll(podcvdHomeDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create podcvd home dir: %w", err)
 	}
@@ -421,14 +456,15 @@ func createAndStartContainer(ccm CuttlefishContainerManager, cvdArgs *CvdArgs) (
 			pathsToMount = append(pathsToMount, realPath)
 		}
 	}
-	mountSpecs := collectMountSpecs(pathsToMount, hostOut, productOut, cvdDataHome, podcvdHomeDir, cacheDir)
+	mountSpecs := collectMountSpecs(pathsToMount, hostOut, productOut, cvdDataHome, podcvdBaseDir, cacheDir)
 
 	extraFlags := []string{
 		"-e", "ANDROID_HOST_OUT=/host_out",
 		"-e", "ANDROID_PRODUCT_OUT=/product_out",
-		"-e", "HOME=/podcvd_home",
+		"-e", "HOME=/podcvd_base/home",
 		"--label", fmt.Sprintf("%s=%s", labelCreatedBy, valueCreatedBy),
 		"--label", fmt.Sprintf("%s=%s", labelAttemptID, attemptID),
+		"--label", fmt.Sprintf("%s=%s", labelBaseDir, podcvdBaseDir),
 		"--annotation", "run.oci.keep_original_groups=1",
 		"--cap-add", "NET_RAW",
 		"--pids-limit", "8192",
@@ -443,7 +479,7 @@ func createAndStartContainer(ccm CuttlefishContainerManager, cvdArgs *CvdArgs) (
 
 	var lastErr error
 	for retryCount := 0; retryCount < 10; retryCount++ {
-		groupNameIpAddrMap, err := Ipv4AddressesByGroupNames(ccm, true)
+		groupNameIpAddrMap, err := Ipv4AddressesByGroupNames(ccm, true, true)
 		if err != nil {
 			return "", err
 		}
@@ -519,7 +555,7 @@ func createAndStartToolingContainer(ccm CuttlefishContainerManager) error {
 		return fmt.Errorf("failed to get cvd data home: %w", err)
 	}
 	if err := os.MkdirAll(cvdDataHome, 0755); err != nil {
-		return fmt.Errorf("failed to eusure directory at %q: %w", cvdDataHome, err)
+		return fmt.Errorf("failed to ensure directory at %q: %w", cvdDataHome, err)
 	}
 	cacheDir := hostCacheDir()
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {

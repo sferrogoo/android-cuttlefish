@@ -162,10 +162,6 @@ bool SharedFD::Pipe(SharedFD* fd0, SharedFD* fd1) {
 }
 
 #ifdef __linux__
-SharedFD SharedFD::Event(int initval, int flags) {
-  return Fd::Event(initval, flags).value_or(Fd());
-}
-
 SharedFD SharedFD::ShmOpen(const std::string& name, int oflag, int mode) {
   return Fd::ShmOpen(name, oflag, mode).value_or(Fd());
 }
@@ -205,14 +201,6 @@ Result<std::pair<SharedFD, SharedFD>> SharedFD::SocketPair(int domain, int type,
     return CF_ERR("socketpair failed: " << ::cuttlefish::StrError(errno));
   }
   return std::make_pair(std::move(a), std::move(b));
-}
-
-SharedFD SharedFD::Open(const std::string& path, int flags, mode_t mode) {
-  return Fd::Open(path, flags, mode).value_or(Fd());
-}
-
-SharedFD SharedFD::Open(const char* path, int flags, mode_t mode) {
-  return Fd::Open(path, flags, mode).value_or(Fd());
 }
 
 SharedFD SharedFD::Socket(int domain, int socket_type, int protocol) {
@@ -264,33 +252,12 @@ SharedFD SharedFD::SocketLocalServer(const std::string& name, bool abstract,
 }
 
 #ifdef __linux__
-SharedFD SharedFD::VsockServer(
-    unsigned int port, int type,
-    std::optional<int> vhost_user_vsock_listening_cid, unsigned int cid) {
-  return Fd::VsockServer(port, type, vhost_user_vsock_listening_cid, cid)
-      .value_or(Fd());
-}
-
-SharedFD SharedFD::VsockServer(
-    int type, std::optional<int> vhost_user_vsock_listening_cid) {
-  return VsockServer(VMADDR_PORT_ANY, type, vhost_user_vsock_listening_cid);
-}
-
-std::string SharedFD::GetVhostUserVsockServerAddr(
-    unsigned int port, int vhost_user_vsock_listening_cid) {
-  return Fd::GetVhostUserVsockServerAddr(port, vhost_user_vsock_listening_cid);
-}
-
-std::string SharedFD::GetVhostUserVsockClientAddr(int cid) {
-  return Fd::GetVhostUserVsockClientAddr(cid);
-}
-
 SharedFD SharedFD::VsockClient(unsigned int cid, unsigned int port, int type,
                                bool vhost_user) {
   if (vhost_user) {
     // TODO(b/277909042): better path than /tmp/vsock_{}/vm.vsock
-    auto client = SharedFD::SocketLocalClient(GetVhostUserVsockClientAddr(cid),
-                                              false /* abstract */, type);
+    auto client = SharedFD::SocketLocalClient(
+        Fd::GetVhostUserVsockClientAddr(cid), false /* abstract */, type);
     const std::string msg = fmt::format("connect {}\n", port);
     SendAll(client, msg);
 
